@@ -1,261 +1,362 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Grid,
+  Card,
+  Text,
+  Title,
+  Group,
+  Stack,
+  Progress,
+  Badge,
+  ThemeIcon,
+  ActionIcon,
+  Container,
+  Paper,
+  RingProgress,
+  Center,
+} from '@mantine/core';
+import {
+  IconTrophy,
+  IconFlame,
+  IconBook,
+  IconStar,
+  IconBrain,
+  IconTarget,
+  IconTrendingUp,
+  IconClock,
+} from '@tabler/icons-react';
 import { motion } from 'framer-motion';
-import { 
-  Brain, 
-  Target, 
-  Trophy, 
-  Flame, 
-  BookOpen, 
-  Clock,
-  TrendingUp,
-  Star
-} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Student } from '../../types';
+import { getStudentProgress, getQuizResults } from '../../services/supabase';
 
 export const StudentDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const student = user as Student;
+  const [progress, setProgress] = useState<any[]>([]);
+  const [recentQuizzes, setRecentQuizzes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    if (!user) return;
+
+    try {
+      const [progressData, quizData] = await Promise.all([
+        getStudentProgress(user.id),
+        getQuizResults(user.id),
+      ]);
+
+      if (progressData.data) setProgress(progressData.data);
+      if (quizData.data) setRecentQuizzes(quizData.data.slice(0, 5));
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalXP = progress.reduce((sum, p) => sum + (p.xp_points || 0), 0);
+  const currentLevel = Math.floor(totalXP / 100) + 1;
+  const xpToNextLevel = 100 - (totalXP % 100);
+  const currentStreak = Math.max(...progress.map(p => p.current_streak || 0), 0);
+  const totalBadges = progress.reduce((sum, p) => sum + (p.badges?.length || 0), 0);
 
   const stats = [
     {
-      label: 'Current Level',
-      value: student?.progress?.level || 1,
-      icon: Trophy,
-      color: 'text-yellow-500',
-      bg: 'bg-yellow-50 dark:bg-yellow-900/20'
+      title: t('student.currentLevel'),
+      value: currentLevel,
+      icon: IconTrophy,
+      color: 'yellow',
+      description: `${xpToNextLevel} XP to next level`,
     },
     {
-      label: 'Learning Streak',
-      value: `${student?.progress?.streak || 0} days`,
-      icon: Flame,
-      color: 'text-orange-500',
-      bg: 'bg-orange-50 dark:bg-orange-900/20'
+      title: t('student.learningStreak'),
+      value: `${currentStreak} days`,
+      icon: IconFlame,
+      color: 'orange',
+      description: 'Keep it up!',
     },
     {
-      label: 'Topics Completed',
-      value: student?.progress?.completedTopics?.length || 0,
-      icon: BookOpen,
-      color: 'text-green-500',
-      bg: 'bg-green-50 dark:bg-green-900/20'
+      title: t('student.topicsCompleted'),
+      value: progress.length,
+      icon: IconBook,
+      color: 'green',
+      description: 'Subjects mastered',
     },
     {
-      label: 'Total XP',
-      value: student?.progress?.xp || 0,
-      icon: Star,
-      color: 'text-purple-500',
-      bg: 'bg-purple-50 dark:bg-purple-900/20'
-    }
+      title: t('student.totalXP'),
+      value: totalXP,
+      icon: IconStar,
+      color: 'purple',
+      description: `${totalBadges} badges earned`,
+    },
   ];
 
   const recentActivities = [
-    { topic: 'Newton\'s Laws', type: 'Quiz Completed', score: '85%', time: '2 hours ago' },
+    { topic: "Newton's Laws", type: 'Quiz Completed', score: '85%', time: '2 hours ago' },
     { topic: 'Algebra Basics', type: 'Lesson Finished', score: '92%', time: '1 day ago' },
-    { topic: 'Geometry', type: 'Practice Session', score: '78%', time: '2 days ago' }
-  ];
+    { topic: 'Geometry', type: 'Practice Session', score: '78%', time: '2 days ago' },
+    ...recentQuizzes.map(quiz => ({
+      topic: quiz.quiz_topic,
+      type: 'Quiz Completed',
+      score: `${Math.round((quiz.score / quiz.total_questions) * 100)}%`,
+      time: new Date(quiz.completed_at).toLocaleDateString(),
+    })),
+  ].slice(0, 5);
 
   const recommendations = [
     { title: 'Review Newton\'s Third Law', reason: 'Based on quiz performance', difficulty: 'Medium' },
     { title: 'Advanced Algebra Problems', reason: 'You\'re ready for the next level!', difficulty: 'Hard' },
-    { title: 'Physics Experiments', reason: 'Visual learning style detected', difficulty: 'Easy' }
+    { title: 'Physics Experiments', reason: 'Visual learning style detected', difficulty: 'Easy' },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
+    <Container size="xl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="student-theme rounded-xl p-6"
+        transition={{ duration: 0.5 }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Welcome back, {student?.name}! 👋
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Ready to continue your learning journey?
-            </p>
-          </div>
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            className="text-4xl"
-          >
-            🎓
-          </motion.div>
-        </div>
-      </motion.div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
+        {/* Welcome Section */}
+        <Paper
+          p="xl"
+          mb="xl"
+          style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+          }}
+        >
+          <Group justify="space-between">
+            <div>
+              <Title order={2} mb="xs">
+                {t('student.welcomeBack', { name: user?.name })}
+              </Title>
+              <Text size="lg" opacity={0.9}>
+                {t('student.readyToLearn')}
+              </Text>
+            </div>
             <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="card hover:shadow-xl"
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              style={{ fontSize: '3rem' }}
             >
-              <div className="flex items-center">
-                <div className={`p-3 rounded-lg ${stat.bg}`}>
-                  <Icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    {stat.label}
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {stat.value}
-                  </p>
-                </div>
-              </div>
+              🎓
             </motion.div>
-          );
-        })}
-      </div>
+          </Group>
+        </Paper>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activities */}
+        {/* Stats Grid */}
+        <Grid mb="xl">
+          {stats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Grid.Col key={stat.title} span={{ base: 12, sm: 6, lg: 3 }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Group justify="space-between" mb="xs">
+                      <Text size="sm" c="dimmed" fw={500}>
+                        {stat.title}
+                      </Text>
+                      <ThemeIcon color={stat.color} variant="light" size="lg">
+                        <Icon size={20} />
+                      </ThemeIcon>
+                    </Group>
+                    <Text size="xl" fw={700} mb="xs">
+                      {stat.value}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {stat.description}
+                    </Text>
+                  </Card>
+                </motion.div>
+              </Grid.Col>
+            );
+          })}
+        </Grid>
+
+        <Grid>
+          {/* Recent Activities */}
+          <Grid.Col span={{ base: 12, lg: 6 }}>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
+                <Group justify="space-between" mb="md">
+                  <Title order={4}>{t('student.recentActivities')}</Title>
+                  <IconClock size={20} color="gray" />
+                </Group>
+                <Stack gap="sm">
+                  {recentActivities.map((activity, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                    >
+                      <Paper p="sm" withBorder>
+                        <Group justify="space-between">
+                          <div>
+                            <Text fw={500} size="sm">
+                              {activity.topic}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {activity.type}
+                            </Text>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <Badge color="indigo" variant="light">
+                              {activity.score}
+                            </Badge>
+                            <Text size="xs" c="dimmed">
+                              {activity.time}
+                            </Text>
+                          </div>
+                        </Group>
+                      </Paper>
+                    </motion.div>
+                  ))}
+                </Stack>
+              </Card>
+            </motion.div>
+          </Grid.Col>
+
+          {/* AI Recommendations */}
+          <Grid.Col span={{ base: 12, lg: 6 }}>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
+                <Group justify="space-between" mb="md">
+                  <Title order={4}>{t('student.aiRecommendations')}</Title>
+                  <IconBrain size={20} color="indigo" />
+                </Group>
+                <Stack gap="sm">
+                  {recommendations.map((rec, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 + index * 0.1 }}
+                    >
+                      <Paper p="sm" withBorder style={{ cursor: 'pointer' }}>
+                        <Group justify="space-between" align="flex-start">
+                          <div style={{ flex: 1 }}>
+                            <Text fw={500} size="sm">
+                              {rec.title}
+                            </Text>
+                            <Text size="xs" c="dimmed" mt={4}>
+                              {rec.reason}
+                            </Text>
+                          </div>
+                          <Badge
+                            color={
+                              rec.difficulty === 'Easy' ? 'green' :
+                              rec.difficulty === 'Medium' ? 'yellow' : 'red'
+                            }
+                            variant="light"
+                            size="sm"
+                          >
+                            {rec.difficulty}
+                          </Badge>
+                        </Group>
+                      </Paper>
+                    </motion.div>
+                  ))}
+                </Stack>
+              </Card>
+            </motion.div>
+          </Grid.Col>
+        </Grid>
+
+        {/* Quick Actions */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Recent Activities
-            </h2>
-            <Clock className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="space-y-3">
-            {recentActivities.map((activity, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-              >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {activity.topic}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {activity.type}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-student-primary">
-                    {activity.score}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {activity.time}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          <Card shadow="sm" padding="lg" radius="md" withBorder mt="xl">
+            <Title order={4} mb="md">
+              {t('student.quickActions')}
+            </Title>
+            <Grid>
+              <Grid.Col span={{ base: 12, sm: 4 }}>
+                <Paper
+                  p="md"
+                  withBorder
+                  style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #667eea20, #764ba220)',
+                  }}
+                >
+                  <Group>
+                    <ThemeIcon color="indigo" variant="light" size="lg">
+                      <IconBrain size={20} />
+                    </ThemeIcon>
+                    <div>
+                      <Text fw={500}>{t('student.askAITutor')}</Text>
+                      <Text size="xs" c="dimmed">Get instant help</Text>
+                    </div>
+                  </Group>
+                </Paper>
+              </Grid.Col>
+              
+              <Grid.Col span={{ base: 12, sm: 4 }}>
+                <Paper
+                  p="md"
+                  withBorder
+                  style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #10b98120, #059f6920)',
+                  }}
+                >
+                  <Group>
+                    <ThemeIcon color="green" variant="light" size="lg">
+                      <IconTarget size={20} />
+                    </ThemeIcon>
+                    <div>
+                      <Text fw={500}>{t('student.takeQuiz')}</Text>
+                      <Text size="xs" c="dimmed">Test your knowledge</Text>
+                    </div>
+                  </Group>
+                </Paper>
+              </Grid.Col>
+              
+              <Grid.Col span={{ base: 12, sm: 4 }}>
+                <Paper
+                  p="md"
+                  withBorder
+                  style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #f59e0b20, #d9770020)',
+                  }}
+                >
+                  <Group>
+                    <ThemeIcon color="orange" variant="light" size="lg">
+                      <IconTrendingUp size={20} />
+                    </ThemeIcon>
+                    <div>
+                      <Text fw={500}>{t('student.viewProgress')}</Text>
+                      <Text size="xs" c="dimmed">Track improvement</Text>
+                    </div>
+                  </Group>
+                </Paper>
+              </Grid.Col>
+            </Grid>
+          </Card>
         </motion.div>
-
-        {/* AI Recommendations */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="card"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              AI Recommendations
-            </h2>
-            <Brain className="h-5 w-5 text-student-primary" />
-          </div>
-          <div className="space-y-3">
-            {recommendations.map((rec, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
-                className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-student-primary/50 transition-colors cursor-pointer"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {rec.title}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {rec.reason}
-                    </p>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    rec.difficulty === 'Easy' 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                      : rec.difficulty === 'Medium'
-                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                  }`}>
-                    {rec.difficulty}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="card"
-      >
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 p-4 bg-gradient-to-r from-student-primary/10 to-student-secondary/10 rounded-lg border border-student-primary/20 hover:border-student-primary/40 transition-colors"
-          >
-            <Brain className="h-6 w-6 text-student-primary" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900 dark:text-gray-100">Ask AI Tutor</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Get instant help</p>
-            </div>
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20 hover:border-green-500/40 transition-colors"
-          >
-            <Target className="h-6 w-6 text-green-500" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900 dark:text-gray-100">Take Quiz</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Test your knowledge</p>
-            </div>
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-colors"
-          >
-            <TrendingUp className="h-6 w-6 text-purple-500" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900 dark:text-gray-100">View Progress</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Track improvement</p>
-            </div>
-          </motion.button>
-        </div>
       </motion.div>
-    </div>
+    </Container>
   );
 };

@@ -1,345 +1,409 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  Group,
+  Stack,
+  Card,
+  Grid,
+  ThemeIcon,
+  Badge,
+  Progress,
+  Timeline,
+} from '@mantine/core';
+import {
+  IconUsers,
+  IconBook,
+  IconTrendingUp,
+  IconClock,
+  IconFileText,
+  IconCheckCircle,
+  IconAlertCircle,
+  IconChartBar,
+} from '@tabler/icons-react';
 import { motion } from 'framer-motion';
-import { 
-  Users, 
-  BookOpen, 
-  TrendingUp, 
-  Clock,
-  Award,
-  AlertCircle,
-  CheckCircle,
-  BarChart3
-} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Teacher } from '../../types';
 
 export const TeacherDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const teacher = user as Teacher;
 
   const stats = [
     {
-      label: 'Total Students',
+      title: t('teacher.totalStudents'),
       value: 156,
-      icon: Users,
-      color: 'text-blue-500',
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
-      change: '+12 this month'
+      icon: IconUsers,
+      color: 'blue',
+      change: '+12 this month',
     },
     {
-      label: 'Active Classes',
+      title: t('teacher.activeClasses'),
       value: 8,
-      icon: BookOpen,
-      color: 'text-green-500',
-      bg: 'bg-green-50 dark:bg-green-900/20',
-      change: '2 new classes'
+      icon: IconBook,
+      color: 'green',
+      change: '2 new classes',
     },
     {
-      label: 'Avg. Performance',
+      title: t('teacher.avgPerformance'),
       value: '87%',
-      icon: TrendingUp,
-      color: 'text-purple-500',
-      bg: 'bg-purple-50 dark:bg-purple-900/20',
-      change: '+5% from last week'
+      icon: IconTrendingUp,
+      color: 'purple',
+      change: '+5% from last week',
     },
     {
-      label: 'Hours Taught',
+      title: t('teacher.hoursTaught'),
       value: 342,
-      icon: Clock,
-      color: 'text-orange-500',
-      bg: 'bg-orange-50 dark:bg-orange-900/20',
-      change: '28 hours this week'
-    }
+      icon: IconClock,
+      color: 'orange',
+      change: '28 hours this week',
+    },
   ];
 
   const recentActivities = [
-    { 
-      type: 'lesson_created', 
-      title: 'Created lesson plan for "Newton\'s Laws"', 
+    {
+      type: 'lesson_created',
+      title: 'Created lesson plan for "Newton\'s Laws"',
       time: '2 hours ago',
-      icon: BookOpen,
-      color: 'text-green-500'
+      icon: IconFileText,
+      color: 'green',
     },
-    { 
-      type: 'quiz_graded', 
-      title: 'Auto-graded 25 physics quizzes', 
+    {
+      type: 'quiz_graded',
+      title: 'Auto-graded 25 physics quizzes',
       time: '4 hours ago',
-      icon: CheckCircle,
-      color: 'text-blue-500'
+      icon: IconCheckCircle,
+      color: 'blue',
     },
-    { 
-      type: 'student_help', 
-      title: 'Sarah Johnson requested help with calculus', 
+    {
+      type: 'student_help',
+      title: 'Sarah Johnson requested help with calculus',
       time: '6 hours ago',
-      icon: AlertCircle,
-      color: 'text-yellow-500'
+      icon: IconAlertCircle,
+      color: 'yellow',
     },
-    { 
-      type: 'performance_review', 
-      title: 'Weekly performance report generated', 
+    {
+      type: 'performance_review',
+      title: 'Weekly performance report generated',
       time: '1 day ago',
-      icon: BarChart3,
-      color: 'text-purple-500'
-    }
+      icon: IconChartBar,
+      color: 'purple',
+    },
   ];
 
   const upcomingClasses = [
     { subject: 'Physics', grade: '11th', time: '9:00 AM', students: 28, room: 'Lab 1' },
     { subject: 'Mathematics', grade: '10th', time: '11:00 AM', students: 32, room: 'Room 205' },
-    { subject: 'Physics', grade: '12th', time: '2:00 PM', students: 24, room: 'Lab 2' }
+    { subject: 'Physics', grade: '12th', time: '2:00 PM', students: 24, room: 'Lab 2' },
   ];
 
   const performanceAlerts = [
     { student: 'Alex Chen', subject: 'Physics', issue: 'Struggling with momentum concepts', severity: 'medium' },
     { student: 'Maria Garcia', subject: 'Math', issue: 'Excellent progress in calculus', severity: 'positive' },
-    { student: 'John Smith', subject: 'Physics', issue: 'Missing assignments', severity: 'high' }
+    { student: 'John Smith', subject: 'Physics', issue: 'Missing assignments', severity: 'high' },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
+    <Container size="xl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="teacher-theme rounded-xl p-6"
+        transition={{ duration: 0.5 }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Welcome back, {teacher?.name}! 👨‍🏫
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Ready to inspire minds today?
-            </p>
-          </div>
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            className="text-4xl"
-          >
-            📚
-          </motion.div>
-        </div>
-      </motion.div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
+        {/* Welcome Section */}
+        <Paper
+          p="xl"
+          mb="xl"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            color: 'white',
+          }}
+        >
+          <Group justify="space-between">
+            <div>
+              <Title order={2} mb="xs">
+                {t('teacher.welcomeBack', { name: user?.name })}
+              </Title>
+              <Text size="lg" opacity={0.9}>
+                {t('teacher.readyToInspire')}
+              </Text>
+            </div>
             <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="card hover:shadow-xl"
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              style={{ fontSize: '3rem' }}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    {stat.label}
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-                    {stat.value}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {stat.change}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-lg ${stat.bg}`}>
-                  <Icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-              </div>
+              📚
             </motion.div>
-          );
-        })}
-      </div>
+          </Group>
+        </Paper>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Classes */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="card"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Today's Schedule
-            </h2>
-            <Clock className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="space-y-3">
-            {upcomingClasses.map((class_, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-              >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {class_.subject} - Grade {class_.grade}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {class_.students} students • {class_.room}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-teacher-primary">
-                    {class_.time}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Recent Activities */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="card"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Recent Activities
-            </h2>
-            <Award className="h-5 w-5 text-teacher-primary" />
-          </div>
-          <div className="space-y-3">
-            {recentActivities.map((activity, index) => {
-              const Icon = activity.icon;
-              return (
+        {/* Stats Grid */}
+        <Grid mb="xl">
+          {stats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Grid.Col key={stat.title} span={{ base: 12, sm: 6, lg: 3 }}>
                 <motion.div
-                  key={index}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 + index * 0.1 }}
-                  className="flex items-start space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
                 >
-                  <div className={`p-1 rounded ${activity.color}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {activity.title}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {activity.time}
-                    </p>
-                  </div>
+                  <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Group justify="space-between" mb="xs">
+                      <div>
+                        <Text size="sm" c="dimmed" fw={500}>
+                          {stat.title}
+                        </Text>
+                        <Text size="xl" fw={700} mt="xs">
+                          {stat.value}
+                        </Text>
+                        <Text size="xs" c="dimmed" mt="xs">
+                          {stat.change}
+                        </Text>
+                      </div>
+                      <ThemeIcon color={stat.color} variant="light" size="lg">
+                        <Icon size={20} />
+                      </ThemeIcon>
+                    </Group>
+                  </Card>
                 </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
-      </div>
+              </Grid.Col>
+            );
+          })}
+        </Grid>
 
-      {/* Performance Alerts */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="card"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Student Performance Alerts
-          </h2>
-          <AlertCircle className="h-5 w-5 text-yellow-500" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {performanceAlerts.map((alert, index) => (
+        <Grid>
+          {/* Today's Schedule */}
+          <Grid.Col span={{ base: 12, lg: 6 }}>
             <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.7 + index * 0.1 }}
-              className={`p-4 rounded-lg border-l-4 ${
-                alert.severity === 'high' 
-                  ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                  : alert.severity === 'medium'
-                  ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                  : 'border-green-500 bg-green-50 dark:bg-green-900/20'
-              }`}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
             >
-              <p className="font-medium text-gray-900 dark:text-gray-100">
-                {alert.student}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {alert.subject}
-              </p>
-              <p className="text-sm mt-2">
-                {alert.issue}
-              </p>
+              <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
+                <Group justify="space-between" mb="md">
+                  <Title order={4}>{t('teacher.todaysSchedule')}</Title>
+                  <IconClock size={20} color="gray" />
+                </Group>
+                <Stack gap="sm">
+                  {upcomingClasses.map((class_, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                    >
+                      <Paper p="sm" withBorder>
+                        <Group justify="space-between">
+                          <div>
+                            <Text fw={500} size="sm">
+                              {class_.subject} - Grade {class_.grade}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {class_.students} students • {class_.room}
+                            </Text>
+                          </div>
+                          <Badge color="blue" variant="light">
+                            {class_.time}
+                          </Badge>
+                        </Group>
+                      </Paper>
+                    </motion.div>
+                  ))}
+                </Stack>
+              </Card>
             </motion.div>
-          ))}
-        </div>
-      </motion.div>
+          </Grid.Col>
 
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="card"
-      >
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 p-4 bg-gradient-to-r from-teacher-primary/10 to-teacher-secondary/10 rounded-lg border border-teacher-primary/20 hover:border-teacher-primary/40 transition-colors"
-          >
-            <BookOpen className="h-6 w-6 text-teacher-primary" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900 dark:text-gray-100">Create Lesson</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">AI-powered plans</p>
-            </div>
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20 hover:border-green-500/40 transition-colors"
-          >
-            <CheckCircle className="h-6 w-6 text-green-500" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900 dark:text-gray-100">Grade Assignments</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Auto-grading</p>
-            </div>
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-colors"
-          >
-            <BarChart3 className="h-6 w-6 text-purple-500" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900 dark:text-gray-100">View Analytics</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Class insights</p>
-            </div>
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 p-4 bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/20 hover:border-orange-500/40 transition-colors"
-          >
-            <Users className="h-6 w-6 text-orange-500" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900 dark:text-gray-100">Manage Students</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Class roster</p>
-            </div>
-          </motion.button>
-        </div>
+          {/* Recent Activities */}
+          <Grid.Col span={{ base: 12, lg: 6 }}>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
+                <Group justify="space-between" mb="md">
+                  <Title order={4}>{t('teacher.recentActivities')}</Title>
+                  <IconFileText size={20} color="blue" />
+                </Group>
+                <Timeline active={recentActivities.length - 1} bulletSize={20} lineWidth={2}>
+                  {recentActivities.map((activity, index) => {
+                    const Icon = activity.icon;
+                    return (
+                      <Timeline.Item
+                        key={index}
+                        bullet={
+                          <ThemeIcon size="sm" color={activity.color} variant="light">
+                            <Icon size={12} />
+                          </ThemeIcon>
+                        }
+                        title={
+                          <Text size="sm" fw={500}>
+                            {activity.title}
+                          </Text>
+                        }
+                      >
+                        <Text size="xs" c="dimmed">
+                          {activity.time}
+                        </Text>
+                      </Timeline.Item>
+                    );
+                  })}
+                </Timeline>
+              </Card>
+            </motion.div>
+          </Grid.Col>
+        </Grid>
+
+        {/* Performance Alerts */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Card shadow="sm" padding="lg" radius="md" withBorder mt="xl">
+            <Group justify="space-between" mb="md">
+              <Title order={4}>{t('teacher.performanceAlerts')}</Title>
+              <IconAlertCircle size={20} color="orange" />
+            </Group>
+            <Grid>
+              {performanceAlerts.map((alert, index) => (
+                <Grid.Col key={index} span={{ base: 12, md: 4 }}>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.7 + index * 0.1 }}
+                  >
+                    <Paper
+                      p="md"
+                      withBorder
+                      style={{
+                        borderLeftWidth: 4,
+                        borderLeftColor:
+                          alert.severity === 'high' ? 'var(--mantine-color-red-6)' :
+                          alert.severity === 'medium' ? 'var(--mantine-color-yellow-6)' :
+                          'var(--mantine-color-green-6)',
+                      }}
+                    >
+                      <Text fw={500} size="sm" mb="xs">
+                        {alert.student}
+                      </Text>
+                      <Text size="xs" c="dimmed" mb="sm">
+                        {alert.subject}
+                      </Text>
+                      <Text size="sm">
+                        {alert.issue}
+                      </Text>
+                    </Paper>
+                  </motion.div>
+                </Grid.Col>
+              ))}
+            </Grid>
+          </Card>
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          <Card shadow="sm" padding="lg" radius="md" withBorder mt="xl">
+            <Title order={4} mb="md">
+              Quick Actions
+            </Title>
+            <Grid>
+              <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                <Paper
+                  p="md"
+                  withBorder
+                  style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #3b82f620, #1d4ed820)',
+                  }}
+                >
+                  <Group>
+                    <ThemeIcon color="blue" variant="light" size="lg">
+                      <IconFileText size={20} />
+                    </ThemeIcon>
+                    <div>
+                      <Text fw={500}>{t('teacher.createLesson')}</Text>
+                      <Text size="xs" c="dimmed">AI-powered plans</Text>
+                    </div>
+                  </Group>
+                </Paper>
+              </Grid.Col>
+              
+              <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                <Paper
+                  p="md"
+                  withBorder
+                  style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #10b98120, #059f6920)',
+                  }}
+                >
+                  <Group>
+                    <ThemeIcon color="green" variant="light" size="lg">
+                      <IconCheckCircle size={20} />
+                    </ThemeIcon>
+                    <div>
+                      <Text fw={500}>{t('teacher.gradeAssignments')}</Text>
+                      <Text size="xs" c="dimmed">Auto-grading</Text>
+                    </div>
+                  </Group>
+                </Paper>
+              </Grid.Col>
+              
+              <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                <Paper
+                  p="md"
+                  withBorder
+                  style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #8b5cf620, #7c3aed20)',
+                  }}
+                >
+                  <Group>
+                    <ThemeIcon color="purple" variant="light" size="lg">
+                      <IconChartBar size={20} />
+                    </ThemeIcon>
+                    <div>
+                      <Text fw={500}>{t('teacher.viewAnalytics')}</Text>
+                      <Text size="xs" c="dimmed">Class insights</Text>
+                    </div>
+                  </Group>
+                </Paper>
+              </Grid.Col>
+              
+              <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                <Paper
+                  p="md"
+                  withBorder
+                  style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #f59e0b20, #d9770020)',
+                  }}
+                >
+                  <Group>
+                    <ThemeIcon color="orange" variant="light" size="lg">
+                      <IconUsers size={20} />
+                    </ThemeIcon>
+                    <div>
+                      <Text fw={500}>{t('teacher.manageStudents')}</Text>
+                      <Text size="xs" c="dimmed">Class roster</Text>
+                    </div>
+                  </Group>
+                </Paper>
+              </Grid.Col>
+            </Grid>
+          </Card>
+        </motion.div>
       </motion.div>
-    </div>
+    </Container>
   );
 };

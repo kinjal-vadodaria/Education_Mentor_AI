@@ -1,0 +1,415 @@
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  Button,
+  Group,
+  Stack,
+  Card,
+  Grid,
+  ThemeIcon,
+  Badge,
+  Table,
+  TextInput,
+  Select,
+  Avatar,
+  Progress,
+  ActionIcon,
+  Modal,
+} from '@mantine/core';
+import {
+  IconUsers,
+  IconSearch,
+  IconFilter,
+  IconUserPlus,
+  IconMail,
+  IconPhone,
+  IconEye,
+  IconEdit,
+  IconTrash,
+  IconTrendingUp,
+  IconTrendingDown,
+  IconTarget,
+} from '@tabler/icons-react';
+import { motion } from 'framer-motion';
+
+export const StudentManagement: React.FC = () => {
+  const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  const students = [
+    {
+      id: 1,
+      name: 'Sarah Johnson',
+      email: 'sarah.johnson@school.edu',
+      class: 'Physics - Grade 10',
+      grade: 'A',
+      avgScore: 94,
+      attendance: 98,
+      assignments: { completed: 18, total: 20 },
+      trend: 'up',
+      lastActive: '2 hours ago',
+      avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150',
+    },
+    {
+      id: 2,
+      name: 'Michael Chen',
+      email: 'michael.chen@school.edu',
+      class: 'Mathematics - Grade 11',
+      grade: 'A-',
+      avgScore: 91,
+      attendance: 95,
+      assignments: { completed: 16, total: 18 },
+      trend: 'up',
+      lastActive: '1 day ago',
+      avatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150',
+    },
+    {
+      id: 3,
+      name: 'Emma Davis',
+      email: 'emma.davis@school.edu',
+      class: 'Chemistry - Grade 12',
+      grade: 'B+',
+      avgScore: 87,
+      attendance: 92,
+      assignments: { completed: 14, total: 16 },
+      trend: 'stable',
+      lastActive: '3 hours ago',
+      avatar: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=150',
+    },
+    {
+      id: 4,
+      name: 'James Wilson',
+      email: 'james.wilson@school.edu',
+      class: 'Physics - Grade 10',
+      grade: 'B',
+      avgScore: 83,
+      attendance: 88,
+      assignments: { completed: 15, total: 20 },
+      trend: 'down',
+      lastActive: '5 hours ago',
+      avatar: 'https://images.pexels.com/photos/1181684/pexels-photo-1181684.jpeg?auto=compress&cs=tinysrgb&w=150',
+    },
+    {
+      id: 5,
+      name: 'Lisa Anderson',
+      email: 'lisa.anderson@school.edu',
+      class: 'Mathematics - Grade 11',
+      grade: 'A',
+      avgScore: 92,
+      attendance: 96,
+      assignments: { completed: 17, total: 18 },
+      trend: 'up',
+      lastActive: '1 hour ago',
+      avatar: 'https://images.pexels.com/photos/1181688/pexels-photo-1181688.jpeg?auto=compress&cs=tinysrgb&w=150',
+    },
+  ];
+
+  const classes = [
+    { value: 'all', label: 'All Classes' },
+    { value: 'physics-10', label: 'Physics - Grade 10' },
+    { value: 'math-11', label: 'Mathematics - Grade 11' },
+    { value: 'chemistry-12', label: 'Chemistry - Grade 12' },
+  ];
+
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         student.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesClass = selectedClass === 'all' || student.class.toLowerCase().includes(selectedClass.replace('-', ' '));
+    return matchesSearch && matchesClass;
+  });
+
+  const classStats = [
+    {
+      title: 'Total Students',
+      value: students.length,
+      icon: IconUsers,
+      color: 'blue',
+    },
+    {
+      title: 'Average Score',
+      value: `${Math.round(students.reduce((sum, s) => sum + s.avgScore, 0) / students.length)}%`,
+      icon: IconTarget,
+      color: 'green',
+    },
+    {
+      title: 'Attendance Rate',
+      value: `${Math.round(students.reduce((sum, s) => sum + s.attendance, 0) / students.length)}%`,
+      icon: IconTrendingUp,
+      color: 'purple',
+    },
+    {
+      title: 'Active Today',
+      value: students.filter(s => s.lastActive.includes('hour')).length,
+      icon: IconUsers,
+      color: 'orange',
+    },
+  ];
+
+  return (
+    <Container size="xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Header */}
+        <Group justify="space-between" mb="xl">
+          <div>
+            <Title order={2}>Student Management</Title>
+            <Text c="dimmed" size="lg">
+              Monitor and manage your students' progress and performance
+            </Text>
+          </div>
+          <Button leftSection={<IconUserPlus size={16} />}>
+            Add Student
+          </Button>
+        </Group>
+
+        {/* Stats Cards */}
+        <Grid mb="xl">
+          {classStats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Grid.Col key={stat.title} span={{ base: 12, sm: 6, lg: 3 }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Group justify="space-between">
+                      <div>
+                        <Text size="sm" c="dimmed" fw={500}>
+                          {stat.title}
+                        </Text>
+                        <Text size="xl" fw={700} mt="xs">
+                          {stat.value}
+                        </Text>
+                      </div>
+                      <ThemeIcon color={stat.color} variant="light" size="lg">
+                        <Icon size={20} />
+                      </ThemeIcon>
+                    </Group>
+                  </Card>
+                </motion.div>
+              </Grid.Col>
+            );
+          })}
+        </Grid>
+
+        {/* Filters */}
+        <Paper shadow="sm" p="md" radius="md" withBorder mb="xl">
+          <Group>
+            <TextInput
+              placeholder="Search students..."
+              leftSection={<IconSearch size={16} />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <Select
+              placeholder="Filter by class"
+              leftSection={<IconFilter size={16} />}
+              data={classes}
+              value={selectedClass}
+              onChange={(value) => setSelectedClass(value || 'all')}
+              w={200}
+            />
+          </Group>
+        </Paper>
+
+        {/* Students Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Paper shadow="sm" radius="md" withBorder>
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Student</Table.Th>
+                  <Table.Th>Class</Table.Th>
+                  <Table.Th>Grade</Table.Th>
+                  <Table.Th>Avg Score</Table.Th>
+                  <Table.Th>Attendance</Table.Th>
+                  <Table.Th>Assignments</Table.Th>
+                  <Table.Th>Trend</Table.Th>
+                  <Table.Th>Last Active</Table.Th>
+                  <Table.Th>Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredStudents.map((student, index) => (
+                  <motion.tr
+                    key={student.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Table.Td>
+                      <Group gap="sm">
+                        <Avatar src={student.avatar} size="sm" radius="xl" />
+                        <div>
+                          <Text fw={500} size="sm">
+                            {student.name}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {student.email}
+                          </Text>
+                        </div>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge variant="light" color="blue">
+                        {student.class}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge
+                        variant="light"
+                        color={
+                          student.grade.startsWith('A') ? 'green' :
+                          student.grade.startsWith('B') ? 'blue' :
+                          student.grade.startsWith('C') ? 'orange' : 'red'
+                        }
+                      >
+                        {student.grade}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <Text fw={600}>{student.avgScore}%</Text>
+                        <Progress
+                          value={student.avgScore}
+                          color={student.avgScore >= 90 ? 'green' : student.avgScore >= 80 ? 'blue' : 'orange'}
+                          size="xs"
+                          w={50}
+                        />
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text fw={500}>{student.attendance}%</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">
+                        {student.assignments.completed}/{student.assignments.total}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <ThemeIcon
+                        size="sm"
+                        color={
+                          student.trend === 'up' ? 'green' :
+                          student.trend === 'down' ? 'red' : 'gray'
+                        }
+                        variant="light"
+                      >
+                        {student.trend === 'up' ? (
+                          <IconTrendingUp size={14} />
+                        ) : student.trend === 'down' ? (
+                          <IconTrendingDown size={14} />
+                        ) : (
+                          <IconTarget size={14} />
+                        )}
+                      </ThemeIcon>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="xs" c="dimmed">
+                        {student.lastActive}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          color="blue"
+                          onClick={() => setSelectedStudent(student)}
+                        >
+                          <IconEye size={16} />
+                        </ActionIcon>
+                        <ActionIcon variant="subtle" color="gray">
+                          <IconEdit size={16} />
+                        </ActionIcon>
+                        <ActionIcon variant="subtle" color="red">
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </motion.tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+        </motion.div>
+
+        {/* Student Detail Modal */}
+        <Modal
+          opened={!!selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          title={selectedStudent ? `${selectedStudent.name} - Profile` : ''}
+          size="lg"
+        >
+          {selectedStudent && (
+            <Stack gap="md">
+              <Group>
+                <Avatar src={selectedStudent.avatar} size="lg" radius="xl" />
+                <div>
+                  <Title order={4}>{selectedStudent.name}</Title>
+                  <Text c="dimmed">{selectedStudent.email}</Text>
+                  <Badge variant="light" color="blue" mt="xs">
+                    {selectedStudent.class}
+                  </Badge>
+                </div>
+              </Group>
+
+              <Grid>
+                <Grid.Col span={6}>
+                  <Paper p="md" withBorder>
+                    <Text size="sm" c="dimmed" mb="xs">Average Score</Text>
+                    <Text size="xl" fw={700}>{selectedStudent.avgScore}%</Text>
+                    <Progress value={selectedStudent.avgScore} mt="xs" />
+                  </Paper>
+                </Grid.Col>
+                <Grid.Col span={6}>
+                  <Paper p="md" withBorder>
+                    <Text size="sm" c="dimmed" mb="xs">Attendance</Text>
+                    <Text size="xl" fw={700}>{selectedStudent.attendance}%</Text>
+                    <Progress value={selectedStudent.attendance} mt="xs" color="green" />
+                  </Paper>
+                </Grid.Col>
+              </Grid>
+
+              <Paper p="md" withBorder>
+                <Text fw={500} mb="sm">Assignment Progress</Text>
+                <Group justify="space-between" mb="xs">
+                  <Text size="sm">Completed: {selectedStudent.assignments.completed}</Text>
+                  <Text size="sm">Total: {selectedStudent.assignments.total}</Text>
+                </Group>
+                <Progress
+                  value={(selectedStudent.assignments.completed / selectedStudent.assignments.total) * 100}
+                  color="blue"
+                />
+              </Paper>
+
+              <Group justify="flex-end">
+                <Button variant="outline" leftSection={<IconMail size={16} />}>
+                  Send Message
+                </Button>
+                <Button leftSection={<IconEdit size={16} />}>
+                  Edit Profile
+                </Button>
+              </Group>
+            </Stack>
+          )}
+        </Modal>
+      </motion.div>
+    </Container>
+  );
+};

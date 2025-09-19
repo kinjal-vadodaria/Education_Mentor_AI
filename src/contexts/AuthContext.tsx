@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Student, Teacher } from '../types';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase, User, signIn, signUp, signOut, getUserProfile } from '../services/supabase';
+import { notifications } from '@mantine/notifications';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: 'student' | 'teacher') => Promise<void>;
-  logout: () => void;
+  supabaseUser: SupabaseUser | null;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, userData: Partial<User>) => Promise<void>;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -20,80 +24,131 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem('edumentor_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        loadUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        await loadUserProfile(session.user.id);
+      } else {
+        setSupabaseUser(null);
+        setUser(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string, role: 'student' | 'teacher') => {
-    setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const mockUser: User = role === 'student' ? {
-      id: '1',
-      name: 'Alex Johnson',
-      email,
-      role: 'student',
-      avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150',
-      preferences: {
-        language: 'en',
-        theme: 'light',
-        difficulty: 'intermediate'
-      }
-    } as Student : {
-      id: '2',
-      name: 'Dr. Sarah Wilson',
-      email,
-      role: 'teacher',
-      avatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150',
-      preferences: {
-        language: 'en',
-        theme: 'light',
-        difficulty: 'advanced'
-      },
-      subjects: ['Physics', 'Mathematics'],
-      classes: []
-    } as Teacher;
-
-    if (role === 'student') {
-      (mockUser as Student).progress = {
-        level: 5,
-        xp: 1250,
-        streak: 7,
-        badges: [
-          {
-            id: '1',
-            name: 'Quick Learner',
-            description: 'Completed 5 topics in a week',
-            icon: '🚀',
-            earnedAt: new Date()
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await getUserProfile(userId);
+      if (error) {
+        console.error('Error loading user profile:', error);
+        // Create a basic profile if none exists
+        const basicUser: User = {
+          id: userId,
+          email: supabaseUser?.email || '',
+          role: 'student',
+          name: supabaseUser?.user_metadata?.name || 'User',
+          created_at: new Date().toISOString(),
+          preferences: {
+            language: 'en',
+            theme: 'light',
+            difficulty: 'intermediate'
           }
-        ],
-        completedTopics: ['Basic Algebra', 'Geometry Basics']
-      };
-      (mockUser as Student).learningStyle = 'visual';
+        };
+        setUser(basicUser);
+      } else {
+        setUser(data);
+      }
+    } catch (error) {
+      console.error('Error in loadUserProfile:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setUser(mockUser);
-    localStorage.setItem('edumentor_user', JSON.stringify(mockUser));
-    setIsLoading(false);
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('edumentor_user');
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await signIn(email, password);
+      if (error) throw error;
+      
+      notifications.show({
+        title: 'Success',
+        message: 'Logged in successfully!',
+        color: 'green',
+      });
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Failed to log in',
+        color: 'red',
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (email: string, password: string, userData: Partial<User>) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await signUp(email, password, userData);
+      if (error) throw error;
+      
+      notifications.show({
+        title: 'Success',
+        message: 'Account created successfully!',
+        color: 'green',
+      });
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Failed to create account',
+        color: 'red',
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await signOut();
+      if (error) throw error;
+      
+      notifications.show({
+        title: 'Success',
+        message: 'Logged out successfully!',
+        color: 'blue',
+      });
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Failed to log out',
+        color: 'red',
+      });
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, supabaseUser, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

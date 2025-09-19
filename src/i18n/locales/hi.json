@@ -1,0 +1,44 @@
+{
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "cancel": "रद्द करें",
+    "save": "सहेजें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "create": "बनाएं",
+    "back": "वापस",
+    "next": "अगला",
+    "previous": "पिछला",
+    "submit": "जमा करें",
+    "close": "बंद करें"
+  },
+  "auth": {
+    "login": "लॉगिन",
+    "logout": "लॉगआउट",
+    "signup": "साइन अप",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "confirmPassword": "पासवर्ड की पुष्टि करें",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "loginAsStudent": "छात्र के रूप में लॉगिन",
+    "loginAsTeacher": "शिक्षक के रूप में लॉगिन",
+    "welcomeBack": "वापसी पर स्वागत है!",
+    "createAccount": "खाता बनाएं",
+    "alreadyHaveAccount": "क्या आपका पहले से खाता है?",
+    "dontHaveAccount": "क्या आपका खाता नहीं है?"
+  },
+  "navigation": {
+    "dashboard": "डैशबोर्ड",
+    "aiTutor": "AI शिक्षक",
+    "quizzes": "प्रश्नोत्तरी",
+    "progress": "प्रगति",
+    "library": "पुस्तकालय",
+    "lessonPlanner": "पाठ योजनाकार",
+    "analytics": "विश्लेषण",
+    "students": "छात्र",
+    "resources": "संसाधन",
+    "settings": "सेटिंग्स"
+  }
+}
