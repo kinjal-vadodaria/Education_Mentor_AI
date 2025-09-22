@@ -1,7 +1,38 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase, saveChatMessage, saveQuizResult, updateStudentProgress } from './supabase';
+import { errorReporting } from './errorReporting';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || 'your-google-ai-api-key';
+
+// Rate limiting
+class RateLimiter {
+  private requests: number[] = [];
+  private maxRequests: number;
+  private timeWindow: number;
+
+  constructor(maxRequests: number = 10, timeWindowMs: number = 60000) {
+    this.maxRequests = maxRequests;
+    this.timeWindow = timeWindowMs;
+  }
+
+  canMakeRequest(): boolean {
+    const now = Date.now();
+    this.requests = this.requests.filter(time => now - time < this.timeWindow);
+    
+    if (this.requests.length >= this.maxRequests) {
+      return false;
+    }
+    
+    this.requests.push(now);
+    return true;
+  }
+
+  getTimeUntilNextRequest(): number {
+    if (this.requests.length < this.maxRequests) return 0;
+    const oldestRequest = Math.min(...this.requests);
+    return this.timeWindow - (Date.now() - oldestRequest);
+  }
+}
 
 export interface AIResponse {
   content: string;
@@ -54,14 +85,83 @@ export interface Activity {
 class AIService {
   private genAI: GoogleGenerativeAI | null = null;
   private model: any = null;
+  private rateLimiter = new RateLimiter(10, 60000); // 10 requests per minute
+  private cache = new Map<string, { data: any; timestamp: number }>();
+  private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
     if (API_KEY && API_KEY !== 'your-google-ai-api-key') {
-      this.genAI = new GoogleGenerativeAI(API_KEY);
-      this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+      try {
+        this.genAI = new GoogleGenerativeAI(API_KEY);
+        this.model = this.genAI.getGenerativeModel({ 
+          model: "gemini-pro",
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to initialize Google AI:', error);
+        errorReporting.reportError(error as Error, { context: 'AI_INITIALIZATION' });
+      }
     }
   }
 
+  private getCacheKey(method: string, ...args: any[]): string {
+    return `${method}_${JSON.stringify(args)}`;
+  }
+
+  private getFromCache<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+      return cached.data;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  private setCache(key: string, data: any): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
+  }
+
+  private async makeAIRequest<T>(
+    requestFn: () => Promise<T>,
+    fallbackFn: () => T,
+    cacheKey?: string
+  ): Promise<T> {
+    // Check cache first
+    if (cacheKey) {
+      const cached = this.getFromCache<T>(cacheKey);
+      if (cached) return cached;
+    }
+
+    // Check rate limit
+    if (!this.rateLimiter.canMakeRequest()) {
+      const waitTime = this.rateLimiter.getTimeUntilNextRequest();
+      throw new Error(`Rate limit exceeded. Please wait ${Math.ceil(waitTime / 1000)} seconds.`);
+    }
+
+    try {
+      if (!this.model) {
+        return fallbackFn();
+      }
+
+      const result = await requestFn();
+      
+      // Cache the result
+      if (cacheKey) {
+        this.setCache(cacheKey, result);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('AI Service Error:', error);
+      errorReporting.reportError(error as Error, { context: 'AI_REQUEST' });
+      return fallbackFn();
+    }
+  }
   async generateExplanation(
     topic: string,
     difficulty: string = 'intermediate',
@@ -70,46 +170,48 @@ class AIService {
     userId?: string,
     sessionId?: string
   ): Promise<AIResponse> {
-    try {
-      if (!this.model) {
-        // Fallback for demo
-        return this.getFallbackExplanation(topic, difficulty);
-      }
+    const cacheKey = this.getCacheKey('explanation', topic, difficulty, language, gradeLevel);
+    
+    return this.makeAIRequest(
+      async () => {
+        const prompt = this.buildExplanationPrompt(topic, difficulty, language, gradeLevel);
+        const result = await this.model.generateContent(prompt);
+        const response = await result.response;
+        const content = response.text();
 
-      const prompt = this.buildExplanationPrompt(topic, difficulty, language, gradeLevel);
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const content = response.text();
+        // Save to database if user is logged in
+        if (userId && sessionId) {
+          try {
+            await saveChatMessage({
+              user_id: userId,
+              message: topic,
+              response: content,
+              timestamp: new Date().toISOString(),
+              session_id: sessionId,
+            });
+          } catch (dbError) {
+            console.error('Failed to save chat message:', dbError);
+          }
+        }
 
-      // Save to database if user is logged in
-      if (userId && sessionId) {
-        await saveChatMessage({
-          user_id: userId,
-          message: topic,
-          response: content,
-          timestamp: new Date().toISOString(),
-          session_id: sessionId,
-        });
-      }
-
-      return {
-        content,
-        type: 'explanation',
-        confidence: 0.95,
-        suggestions: [
-          "Would you like me to create a quiz on this topic?",
-          "Should I explain this with more examples?",
-          "Would you like to see this concept in action?"
-        ],
-        followUp: [
-          "What part would you like me to explain further?",
-          "How does this relate to what you already know?"
-        ]
-      };
-    } catch (error) {
-      console.error('AI Service Error:', error);
-      return this.getFallbackExplanation(topic, difficulty);
-    }
+        return {
+          content,
+          type: 'explanation' as const,
+          confidence: 0.95,
+          suggestions: [
+            "Would you like me to create a quiz on this topic?",
+            "Should I explain this with more examples?",
+            "Would you like to see this concept in action?"
+          ],
+          followUp: [
+            "What part would you like me to explain further?",
+            "How does this relate to what you already know?"
+          ]
+        };
+      },
+      () => this.getFallbackExplanation(topic, difficulty),
+      cacheKey
+    );
   }
 
   async generateQuiz(
@@ -118,24 +220,20 @@ class AIService {
     questionCount: number = 5,
     userId?: string
   ): Promise<Quiz> {
-    try {
-      if (!this.model) {
-        return this.getFallbackQuiz(topic, difficulty);
-      }
+    const cacheKey = this.getCacheKey('quiz', topic, difficulty, questionCount);
+    
+    return this.makeAIRequest(
+      async () => {
+        const prompt = this.buildQuizPrompt(topic, difficulty, questionCount);
+        const result = await this.model.generateContent(prompt);
+        const response = await result.response;
+        const content = response.text();
 
-      const prompt = this.buildQuizPrompt(topic, difficulty, questionCount);
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const content = response.text();
-
-      // Parse AI response to create quiz structure
-      const quiz = this.parseQuizFromAI(content, topic, difficulty);
-      
-      return quiz;
-    } catch (error) {
-      console.error('Quiz Generation Error:', error);
-      return this.getFallbackQuiz(topic, difficulty);
-    }
+        return this.parseQuizFromAI(content, topic, difficulty);
+      },
+      () => this.getFallbackQuiz(topic, difficulty),
+      cacheKey
+    );
   }
 
   async generateLessonPlan(
@@ -144,24 +242,20 @@ class AIService {
     duration: number = 45,
     subject: string = 'General'
   ): Promise<LessonPlan> {
-    try {
-      if (!this.model) {
-        return this.getFallbackLessonPlan(topic, grade, duration, subject);
-      }
+    const cacheKey = this.getCacheKey('lessonPlan', topic, grade, duration, subject);
+    
+    return this.makeAIRequest(
+      async () => {
+        const prompt = this.buildLessonPlanPrompt(topic, grade, duration, subject);
+        const result = await this.model.generateContent(prompt);
+        const response = await result.response;
+        const content = response.text();
 
-      const prompt = this.buildLessonPlanPrompt(topic, grade, duration, subject);
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const content = response.text();
-
-      // Parse AI response to create lesson plan structure
-      const lessonPlan = this.parseLessonPlanFromAI(content, topic, grade, duration, subject);
-      
-      return lessonPlan;
-    } catch (error) {
-      console.error('Lesson Plan Generation Error:', error);
-      return this.getFallbackLessonPlan(topic, grade, duration, subject);
-    }
+        return this.parseLessonPlanFromAI(content, topic, grade, duration, subject);
+      },
+      () => this.getFallbackLessonPlan(topic, grade, duration, subject),
+      cacheKey
+    );
   }
 
   async gradeQuiz(
@@ -204,22 +298,27 @@ class AIService {
 
     // Save quiz result and update progress if user is logged in
     if (userId) {
-      await saveQuizResult({
-        user_id: userId,
-        quiz_topic: quiz.topic,
-        score,
-        total_questions: quiz.questions.length,
-        completed_at: new Date().toISOString(),
-        time_taken: 300, // Default time for demo
-      });
+      try {
+        await saveQuizResult({
+          user_id: userId,
+          quiz_topic: quiz.topic,
+          score,
+          total_questions: quiz.questions.length,
+          completed_at: new Date().toISOString(),
+          time_taken: 300, // Default time for demo
+        });
 
-      // Update student progress
-      await updateStudentProgress(userId, quiz.topic, {
-        xp_points: xpGained,
-        current_streak: 1, // Simplified for demo
-        level: percentage >= 90 ? 'advanced' : percentage >= 70 ? 'intermediate' : 'beginner',
-        badges: percentage >= 90 ? ['quiz_master'] : [],
-      });
+        // Update student progress
+        await updateStudentProgress(userId, quiz.topic, {
+          xp_points: xpGained,
+          current_streak: 1, // Simplified for demo
+          level: percentage >= 90 ? 'advanced' : percentage >= 70 ? 'intermediate' : 'beginner',
+          badges: percentage >= 90 ? ['quiz_master'] : [],
+        });
+      } catch (dbError) {
+        console.error('Failed to save quiz results:', dbError);
+        errorReporting.reportError(dbError as Error, { context: 'QUIZ_SAVE' });
+      }
     }
 
     return { score, totalPoints, feedback, suggestions, xpGained };
@@ -231,31 +330,51 @@ class AIService {
                              difficulty === 'advanced' ? 'with detailed technical explanations' : 
                              'with clear examples and moderate detail';
 
-    return `Explain "${topic}" ${difficultyContext} ${gradeContext} in ${language}. 
-            Make it engaging and educational. Use analogies and real-world examples where appropriate.
-            Keep the explanation concise but comprehensive.`;
+    return `You are an expert educator. Explain "${topic}" ${difficultyContext} ${gradeContext} in ${language}. 
+            Requirements:
+            - Make it engaging and educational
+            - Use analogies and real-world examples where appropriate
+            - Keep the explanation concise but comprehensive
+            - Structure the response with clear sections
+            - Include practical applications when relevant
+            - Adapt the vocabulary to the specified difficulty level`;
   }
 
   private buildQuizPrompt(topic: string, difficulty: string, questionCount: number): string {
-    return `Create a ${difficulty} level quiz about "${topic}" with ${questionCount} multiple-choice questions.
-            Format the response as JSON with this structure:
+    return `You are an expert quiz creator. Create a ${difficulty} level quiz about "${topic}" with ${questionCount} multiple-choice questions.
+            
+            Requirements:
+            - Questions should test understanding, not just memorization
+            - Include a mix of conceptual and application questions
+            - Provide clear, educational explanations for correct answers
+            - Ensure all options are plausible
+            
+            Format the response as valid JSON with this exact structure:
             {
               "questions": [
                 {
                   "question": "Question text",
                   "options": ["A", "B", "C", "D"],
                   "correctAnswer": "A",
-                  "explanation": "Why this is correct"
+                  "explanation": "Detailed explanation of why this is correct and why other options are wrong"
                 }
               ]
             }`;
   }
 
   private buildLessonPlanPrompt(topic: string, grade: string, duration: number, subject: string): string {
-    return `Create a comprehensive lesson plan for "${topic}" for grade ${grade} ${subject} class, 
-            lasting ${duration} minutes. Include learning objectives, required materials, 
-            detailed activities with time allocations, and assessment strategies.
-            Format as a structured lesson plan suitable for classroom use.`;
+    return `You are an expert curriculum designer. Create a comprehensive lesson plan for "${topic}" for grade ${grade} ${subject} class, lasting ${duration} minutes.
+            
+            Requirements:
+            - Include 3-5 specific, measurable learning objectives
+            - List all required materials and resources
+            - Design engaging activities with specific time allocations
+            - Include formative and summative assessment strategies
+            - Consider different learning styles and abilities
+            - Provide clear instructions for each activity
+            - Include extension activities for advanced learners
+            
+            Structure the response as a professional lesson plan suitable for classroom use.`;
   }
 
   private getFallbackExplanation(topic: string, difficulty: string): AIResponse {
@@ -410,6 +529,7 @@ class AIService {
       }
     } catch (error) {
       console.error('Failed to parse AI quiz response:', error);
+      errorReporting.reportError(error as Error, { context: 'QUIZ_PARSING', content });
     }
 
     // Fallback to default quiz
@@ -420,6 +540,24 @@ class AIService {
     // For demo purposes, return structured lesson plan
     // In production, this would parse the AI response more intelligently
     return this.getFallbackLessonPlan(topic, grade, duration, subject);
+  }
+
+  // Health check method
+  async healthCheck(): Promise<boolean> {
+    try {
+      if (!this.model) return false;
+      
+      const result = await this.model.generateContent("Say 'OK' if you're working.");
+      const response = await result.response;
+      return response.text().includes('OK');
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Clear cache method
+  clearCache(): void {
+    this.cache.clear();
   }
 }
 

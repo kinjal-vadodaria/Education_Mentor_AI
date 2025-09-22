@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, User, signIn, signUp, signOut, getUserProfile } from '../services/supabase';
 import { notifications } from '@mantine/notifications';
+import { errorReporting } from '../services/errorReporting';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   register: (email: string, password: string, userData: Partial<User>) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      
       if (session?.user) {
         setSupabaseUser(session.user);
         await loadUserProfile(session.user.id);
@@ -54,16 +58,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loadUserProfile = async (userId: string) => {
+    setIsLoading(true);
     try {
       const { data, error } = await getUserProfile(userId);
       if (error) {
         console.error('Error loading user profile:', error);
+        errorReporting.reportError(error, { context: 'LOAD_USER_PROFILE', userId });
+        
         // Create a basic profile if none exists
+        const supabaseUserData = supabase.auth.getUser();
         const basicUser: User = {
           id: userId,
-          email: supabaseUser?.email || '',
+          email: (await supabaseUserData).data.user?.email || '',
           role: 'student',
-          name: supabaseUser?.user_metadata?.name || 'User',
+          name: (await supabaseUserData).data.user?.user_metadata?.name || 'User',
           created_at: new Date().toISOString(),
           preferences: {
             language: 'en',
@@ -77,8 +85,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
+      errorReporting.reportError(error as Error, { context: 'LOAD_USER_PROFILE_CATCH', userId });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const refreshUser = async () => {
+    if (supabaseUser) {
+      await loadUserProfile(supabaseUser.id);
     }
   };
 
@@ -93,7 +108,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message: 'Logged in successfully!',
         color: 'green',
       });
+      
+      errorReporting.reportUserAction('LOGIN_SUCCESS', { email });
     } catch (error: any) {
+      errorReporting.reportError(error, { context: 'LOGIN_FAILED', email });
       notifications.show({
         title: 'Error',
         message: error.message || 'Failed to log in',
@@ -116,7 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message: 'Account created successfully!',
         color: 'green',
       });
+      
+      errorReporting.reportUserAction('REGISTER_SUCCESS', { email, role: userData.role });
     } catch (error: any) {
+      errorReporting.reportError(error, { context: 'REGISTER_FAILED', email });
       notifications.show({
         title: 'Error',
         message: error.message || 'Failed to create account',
@@ -138,7 +159,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message: 'Logged out successfully!',
         color: 'blue',
       });
+      
+      errorReporting.reportUserAction('LOGOUT_SUCCESS');
     } catch (error: any) {
+      errorReporting.reportError(error, { context: 'LOGOUT_FAILED' });
       notifications.show({
         title: 'Error',
         message: error.message || 'Failed to log out',
@@ -148,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, supabaseUser, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, supabaseUser, login, register, logout, isLoading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

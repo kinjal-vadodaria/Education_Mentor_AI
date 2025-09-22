@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Stack, NavLink, Text, ThemeIcon } from '@mantine/core';
+import { Stack, NavLink, Text, ThemeIcon, Paper } from '@mantine/core';
 import {
   IconHome,
   IconBrain,
@@ -12,6 +12,7 @@ import {
   IconUsers,
   IconFolder,
 } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface NavbarProps {
@@ -43,36 +44,46 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   const primaryColor = user?.role === 'student' ? 'indigo' : 'blue';
 
   return (
-    <Stack gap="xs">
-      <Text size="xs" tt="uppercase" fw={700} c="dimmed" px="sm">
-        Navigation
-      </Text>
-      
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
+    <Paper p="md" h="100%">
+      <Stack gap="xs">
+        <Text size="xs" tt="uppercase" fw={700} c="dimmed" px="sm">
+          {t('common.navigation')}
+        </Text>
         
-        return (
-          <NavLink
-            key={tab.id}
-            active={isActive}
-            label={tab.label}
-            leftSection={
-              <ThemeIcon
-                size="sm"
-                variant={isActive ? 'filled' : 'light'}
-                color={primaryColor}
-              >
-                <Icon size={16} />
-              </ThemeIcon>
-            }
-            onClick={() => onTabChange(tab.id)}
-            style={{
-              borderRadius: 8,
-            }}
-          />
-        );
-      })}
-    </Stack>
+        {tabs.map((tab, index) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          
+          return (
+            <motion.div
+              key={tab.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <NavLink
+                active={isActive}
+                label={tab.label}
+                leftSection={
+                  <ThemeIcon
+                    size="sm"
+                    variant={isActive ? 'filled' : 'light'}
+                    color={primaryColor}
+                  >
+                    <Icon size={16} />
+                  </ThemeIcon>
+                }
+                onClick={() => onTabChange(tab.id)}
+                style={{
+                  borderRadius: 8,
+                }}
+              />
+            </motion.div>
+          );
+        })}
+      </Stack>
+    </Paper>
   );
 };

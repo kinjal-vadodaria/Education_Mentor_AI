@@ -12,7 +12,16 @@
     "next": "Next",
     "previous": "Previous",
     "submit": "Submit",
-    "close": "Close"
+    "close": "Close",
+    "navigation": "Navigation",
+    "student": "Student",
+    "teacher": "Teacher",
+    "studentPortal": "Student Portal",
+    "teacherDashboard": "Teacher Dashboard",
+    "changeLanguage": "Change Language",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "notifications": "Notifications"
   },
   "auth": {
     "login": "Login",

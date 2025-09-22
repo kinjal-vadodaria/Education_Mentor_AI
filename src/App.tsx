@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AppShell, Container, LoadingOverlay } from '@mantine/core';
 import { useDisclosure, useColorScheme } from '@mantine/hooks';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { Header } from './components/Layout/Header';
@@ -21,7 +23,7 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   if (isLoading) {
-    return <LoadingOverlay visible />;
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
   }
 
   if (!user) {
@@ -77,12 +79,16 @@ const AppContent: React.FC = () => {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        <ErrorBoundary>
+          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        </ErrorBoundary>
       </AppShell.Navbar>
 
       <AppShell.Main>
         <Container size="xl" px="md">
-          {renderContent()}
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
         </Container>
       </AppShell.Main>
     </AppShell>
@@ -91,11 +97,13 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

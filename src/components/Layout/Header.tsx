@@ -10,6 +10,7 @@ import {
   Select,
   useMantineColorScheme,
   ThemeIcon,
+  Tooltip,
 } from '@mantine/core';
 import {
   IconSun,
@@ -35,10 +36,14 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
   const languages = [
     { value: 'en', label: '🇺🇸 English' },
     { value: 'es', label: '🇪🇸 Español' },
+    { value: 'fr', label: '🇫🇷 Français' },
+    { value: 'de', label: '🇩🇪 Deutsch' },
     { value: 'hi', label: '🇮🇳 हिंदी' },
     { value: 'zh', label: '🇨🇳 中文' },
     { value: 'ar', label: '🇸🇦 العربية' },
-    { value: 'fr', label: '🇫🇷 Français' },
+    { value: 'pt', label: '🇧🇷 Português' },
+    { value: 'ru', label: '🇷🇺 Русский' },
+    { value: 'ja', label: '🇯🇵 日本語' },
   ];
 
   const handleLanguageChange = (value: string | null) => {
@@ -78,6 +83,7 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
       </Group>
 
       <Group>
+        <Tooltip label={t('common.changeLanguage')}>
         <Select
           data={languages}
           value={i18n.language}
@@ -85,23 +91,31 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
           leftSection={<IconWorld size={16} />}
           w={140}
           size="xs"
+            searchable
+            clearable={false}
         />
+        </Tooltip>
 
+        <Tooltip label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}>
         <ActionIcon
           variant="subtle"
           onClick={() => toggleColorScheme()}
           size="lg"
+            aria-label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
         >
           {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
         </ActionIcon>
+        </Tooltip>
 
+        <Tooltip label={t('common.notifications')}>
         <ActionIcon variant="subtle" size="lg">
           <IconBell size={18} />
         </ActionIcon>
+        </Tooltip>
 
         <Menu shadow="md" width={200}>
           <Menu.Target>
-            <Group style={{ cursor: 'pointer' }}>
+            <Group style={{ cursor: 'pointer' }} gap="sm">
               <Avatar size="sm" radius="xl">
                 {user?.name?.charAt(0).toUpperCase()}
               </Avatar>
@@ -110,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
                   {user?.name}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {user?.role}
+                  {t(`common.${user?.role}`)}
                 </Text>
               </div>
             </Group>
