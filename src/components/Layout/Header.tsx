@@ -1,150 +1,142 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Group,
-  Burger,
-  Text,
-  ActionIcon,
-  Menu,
-  Avatar,
-  Select,
-  useMantineColorScheme,
-  ThemeIcon,
-  Tooltip,
-} from '@mantine/core';
-import {
-  IconSun,
-  IconMoon,
-  IconBell,
-  IconSettings,
-  IconLogout,
-  IconSchool,
-  IconWorld,
-} from '@tabler/icons-react';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useState } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AppShell, Container, LoadingOverlay } from '@mantine/core';
+import { useDisclosure, useColorScheme } from '@mantine/hooks';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginForm } from './components/Auth/LoginForm';
+import { Header } from './components/Layout/Header';
+import { Navbar } from './components/Layout/Navbar';
+import { StudentDashboard } from './components/Student/Dashboard';
+import { AITutor } from './components/Student/AITutor';
+import { QuizInterface } from './components/Student/QuizInterface';
+import { ProgressTracker } from './components/Student/ProgressTracker';
+import { TeacherDashboard } from './components/Teacher/Dashboard';
+import { LessonPlanner } from './components/Teacher/LessonPlanner';
+import { Analytics } from './components/Teacher/Analytics';
+import { StudentManagement } from './components/Teacher/StudentManagement';
 
-interface HeaderProps {
-  opened: boolean;
-  toggle: () => void;
-}
+const AppContent: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [opened, { toggle }] = useDisclosure();
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
-  const { t, i18n } = useTranslation();
-  const { user, logout } = useAuth();
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
 
-  const languages = [
-    { value: 'en', label: '🇺🇸 English' },
-    { value: 'es', label: '🇪🇸 Español' },
-    { value: 'fr', label: '🇫🇷 Français' },
-    { value: 'de', label: '🇩🇪 Deutsch' },
-    { value: 'hi', label: '🇮🇳 हिंदी' },
-    { value: 'zh', label: '🇨🇳 中文' },
-    { value: 'ar', label: '🇸🇦 العربية' },
-    { value: 'pt', label: '🇧🇷 Português' },
-    { value: 'ru', label: '🇷🇺 Русский' },
-    { value: 'ja', label: '🇯🇵 日本語' },
-  ];
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
 
-  const handleLanguageChange = (value: string | null) => {
-    if (value) {
-      i18n.changeLanguage(value);
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  const renderContent = () => {
+    if (user.role === 'student') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <StudentDashboard />;
+        case 'ai-tutor':
+          return <AITutor />;
+        case 'quizzes':
+          return <QuizInterface />;
+        case 'progress':
+          return <ProgressTracker />;
+        case 'library':
+          return <Container>Library coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <StudentDashboard />;
+      }
+    } else {
+      switch (activeTab) {
+        case 'dashboard':
+          return <TeacherDashboard />;
+        case 'lesson-planner':
+          return <LessonPlanner />;
+        case 'analytics':
+          return <Analytics />;
+        case 'students':
+          return <StudentManagement />;
+        case 'resources':
+          return <Container>Resources coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <TeacherDashboard />;
+      }
     }
   };
 
   return (
-    <Group h="100%" px="md" justify="space-between">
-      <Group>
-        <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-        
-        <Group gap="xs">
-          <ThemeIcon
-            size="lg"
-            radius="md"
-            variant="gradient"
-            gradient={
-              user?.role === 'student'
-                ? { from: 'indigo', to: 'purple' }
-                : { from: 'blue', to: 'cyan' }
-            }
-          >
-            <IconSchool size={20} />
-          </ThemeIcon>
-          
-          <div>
-            <Text size="lg" fw={700} c={user?.role === 'student' ? 'indigo' : 'blue'}>
-              EduMentor AI
-            </Text>
-            <Text size="xs" c="dimmed">
-              {user?.role === 'student' ? 'Student Portal' : 'Teacher Dashboard'}
-            </Text>
-          </div>
-        </Group>
-      </Group>
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Header opened={opened} toggle={toggle} />
+      </AppShell.Header>
 
-      <Group>
-        <Tooltip label={t('common.changeLanguage')}>
-        <Select
-          data={languages}
-          value={i18n.language}
-          onChange={handleLanguageChange}
-          leftSection={<IconWorld size={16} />}
-          w={140}
-          size="xs"
-            searchable
-            clearable={false}
-        />
-        </Tooltip>
+      <AppShell.Navbar p="md">
+        <ErrorBoundary>
+          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        </ErrorBoundary>
+      </AppShell.Navbar>
 
-        <Tooltip label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}>
-        <ActionIcon
-          variant="subtle"
-          onClick={() => toggleColorScheme()}
-          size="lg"
-            aria-label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
-        >
-          {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-        </ActionIcon>
-        </Tooltip>
-
-        <Tooltip label={t('common.notifications')}>
-        <ActionIcon variant="subtle" size="lg">
-          <IconBell size={18} />
-        </ActionIcon>
-        </Tooltip>
-
-        <Menu shadow="md" width={200}>
-          <Menu.Target>
-            <Group style={{ cursor: 'pointer' }} gap="sm">
-              <Avatar size="sm" radius="xl">
-                {user?.name?.charAt(0).toUpperCase()}
-              </Avatar>
-              <div style={{ flex: 1 }}>
-                <Text size="sm" fw={500}>
-                  {user?.name}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {t(`common.${user?.role}`)}
-                </Text>
-              </div>
-            </Group>
-          </Menu.Target>
-
-          <Menu.Dropdown>
-            <Menu.Item leftSection={<IconSettings size={14} />}>
-              {t('navigation.settings')}
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item
-              leftSection={<IconLogout size={14} />}
-              color="red"
-              onClick={logout}
-            >
-              {t('auth.logout')}
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      </Group>
-    </Group>
+      <AppShell.Main>
+        <Container size="xl" px="md">
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
   );
 };
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
