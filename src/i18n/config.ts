@@ -1,49 +1,142 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+import React, { useState } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AppShell, Container, LoadingOverlay } from '@mantine/core';
+import { useDisclosure, useColorScheme } from '@mantine/hooks';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginForm } from './components/Auth/LoginForm';
+import { Header } from './components/Layout/Header';
+import { Navbar } from './components/Layout/Navbar';
+import { StudentDashboard } from './components/Student/Dashboard';
+import { AITutor } from './components/Student/AITutor';
+import { QuizInterface } from './components/Student/QuizInterface';
+import { ProgressTracker } from './components/Student/ProgressTracker';
+import { TeacherDashboard } from './components/Teacher/Dashboard';
+import { LessonPlanner } from './components/Teacher/LessonPlanner';
+import { Analytics } from './components/Teacher/Analytics';
+import { StudentManagement } from './components/Teacher/StudentManagement';
 
-// Import translation files
-import enTranslations from './locales/en.json';
-import esTranslations from './locales/es.json';
-import frTranslations from './locales/fr.json';
-import deTranslations from './locales/de.json';
-import hiTranslations from './locales/hi.json';
-import zhTranslations from './locales/zh.json';
-import arTranslations from './locales/ar.json';
-import ptTranslations from './locales/pt.json';
-import ruTranslations from './locales/ru.json';
-import jaTranslations from './locales/ja.json';
+const AppContent: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [opened, { toggle }] = useDisclosure();
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-const resources = {
-  en: { translation: enTranslations },
-  es: { translation: esTranslations },
-  fr: { translation: frTranslations },
-  de: { translation: deTranslations },
-  hi: { translation: hiTranslations },
-  zh: { translation: zhTranslations },
-  ar: { translation: arTranslations },
-  pt: { translation: ptTranslations },
-  ru: { translation: ruTranslations },
-  ja: { translation: jaTranslations },
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  const renderContent = () => {
+    if (user.role === 'student') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <StudentDashboard />;
+        case 'ai-tutor':
+          return <AITutor />;
+        case 'quizzes':
+          return <QuizInterface />;
+        case 'progress':
+          return <ProgressTracker />;
+        case 'library':
+          return <Container>Library coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <StudentDashboard />;
+      }
+    } else {
+      switch (activeTab) {
+        case 'dashboard':
+          return <TeacherDashboard />;
+        case 'lesson-planner':
+          return <LessonPlanner />;
+        case 'analytics':
+          return <Analytics />;
+        case 'students':
+          return <StudentManagement />;
+        case 'resources':
+          return <Container>Resources coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <TeacherDashboard />;
+      }
+    }
+  };
+
+  return (
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Header opened={opened} toggle={toggle} />
+      </AppShell.Header>
+
+      <AppShell.Navbar p="md">
+        <ErrorBoundary>
+          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        </ErrorBoundary>
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        <Container size="xl" px="md">
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
+  );
 };
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: 'en',
-    debug: process.env.NODE_ENV === 'development',
-    interpolation: {
-      escapeValue: false,
-    },
-    detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: ['localStorage'],
-    },
-    react: {
-      useSuspense: false,
-    },
-  });
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+}
 
-export default i18n;
+export default App;

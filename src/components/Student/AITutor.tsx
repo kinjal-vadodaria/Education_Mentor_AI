@@ -1,388 +1,202 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Container,
-  Paper,
-  TextInput,
-  Button,
-  Stack,
-  Group,
-  Text,
-  ActionIcon,
-  Select,
-  Badge,
-  ScrollArea,
-  ThemeIcon,
-  Loader,
-  Card,
-} from '@mantine/core';
-import {
-  IconSend,
-  IconMicrophone,
-  IconMicrophoneOff,
-  IconVolume,
-  IconVolumeOff,
-  IconBrain,
-  IconBulb,
-  IconTarget,
-  IconWorld,
-  IconBolt,
-} from '@tabler/icons-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../contexts/AuthContext';
-import { aiService } from '../../services/aiService';
-import { notifications } from '@mantine/notifications';
+import React, { useState } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AppShell, Container, LoadingOverlay } from '@mantine/core';
+import { useDisclosure, useColorScheme } from '@mantine/hooks';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginForm } from './components/Auth/LoginForm';
+import { Header } from './components/Layout/Header';
+import { Navbar } from './components/Layout/Navbar';
+import { StudentDashboard } from './components/Student/Dashboard';
+import { AITutor } from './components/Student/AITutor';
+import { QuizInterface } from './components/Student/QuizInterface';
+import { ProgressTracker } from './components/Student/ProgressTracker';
+import { TeacherDashboard } from './components/Teacher/Dashboard';
+import { LessonPlanner } from './components/Teacher/LessonPlanner';
+import { Analytics } from './components/Teacher/Analytics';
+import { StudentManagement } from './components/Teacher/StudentManagement';
 
-interface ChatMessage {
-  id: string;
-  content: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-  type: 'text' | 'quiz' | 'explanation';
-}
+const AppContent: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [opened, { toggle }] = useDisclosure();
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-export const AITutor: React.FC = () => {
-  const { t, i18n } = useTranslation();
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      content: "Hi! I'm your AI tutor. I can explain any topic, create quizzes, and adapt to your learning style. What would you like to learn today?",
-      sender: 'ai',
-      timestamp: new Date(),
-      type: 'text',
-    },
-  ]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [difficulty, setDifficulty] = useState('intermediate');
-  const [sessionId] = useState(() => crypto.randomUUID());
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const languages = [
-    { value: 'en', label: '🇺🇸 English' },
-    { value: 'es', label: '🇪🇸 Español' },
-    { value: 'hi', label: '🇮🇳 हिंदी' },
-    { value: 'zh', label: '🇨🇳 中文' },
-    { value: 'ar', label: '🇸🇦 العربية' },
-    { value: 'fr', label: '🇫🇷 Français' },
-  ];
-
-  const quickPrompts = [
-    t('aiTutor.explainNewton'),
-    t('aiTutor.createQuiz'),
-    t('aiTutor.helpCalculus'),
-    t('aiTutor.explainQuantum'),
-  ];
-
+  // Listen for tab change events from quick actions
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleSend = async (message?: string) => {
-    const messageText = message || input.trim();
-    if (!messageText || isLoading) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: messageText,
-      sender: 'user',
-      timestamp: new Date(),
-      type: 'text',
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
 
-    try {
-      const isQuizRequest = messageText.toLowerCase().includes('quiz') || 
-                           messageText.toLowerCase().includes('test') ||
-                           messageText.toLowerCase().includes('questions');
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
 
-      if (isQuizRequest) {
-        const quiz = await aiService.generateQuiz(messageText, difficulty, 5, user?.id);
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: `I've created a quiz for you on "${messageText}". Ready to test your knowledge?`,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'quiz',
-        };
-        setMessages(prev => [...prev, aiMessage]);
-      } else {
-        const response = await aiService.generateExplanation(
-          messageText,
-          difficulty,
-          i18n.language,
-          user?.grade_level,
-          user?.id,
-          sessionId
-        );
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: response.content,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'explanation',
-        };
-        setMessages(prev => [...prev, aiMessage]);
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  const renderContent = () => {
+    if (user.role === 'student') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <StudentDashboard />;
+        case 'ai-tutor':
+        try {
+          const quiz = await aiService.generateQuiz(messageText, difficulty, 5, user?.id);
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: `I've created a quiz for you on "${messageText}". Here are the questions:\n\n${quiz.questions.map((q, i) => `${i + 1}. ${q.question}\n${q.options?.map((opt, j) => `   ${String.fromCharCode(65 + j)}. ${opt}`).join('\n') || ''}`).join('\n\n')}\n\nWould you like to take this quiz in the Quiz section?`,
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'quiz',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        } catch (error) {
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: `I'd be happy to create a quiz for you on "${messageText}"! However, I'm having trouble generating it right now. You can try the Quiz section for pre-made quizzes on various topics.`,
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'text',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        }
+        case 'settings':
+        try {
+          const response = await aiService.generateExplanation(
+            messageText,
+            difficulty,
+            i18n.language,
+            user?.grade_level,
+            user?.id,
+            sessionId
+          );
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: response.content,
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'explanation',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        } catch (error) {
+          // Provide a helpful fallback response
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: this.getFallbackResponse(messageText, difficulty),
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'explanation',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        }
+        case 'students':
+          return <StudentManagement />;
+        case 'resources':
+          return <Container>Resources coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        default:
+      
+      // Add fallback message
+      const fallbackMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm sorry, I'm having trouble connecting right now. Let me try to help you with what I know! Could you please rephrase your question or try asking about a specific topic like physics, math, or science?",
+        sender: 'ai',
+        timestamp: new Date(),
+        type: 'text',
+      };
+      setMessages(prev => [...prev, fallbackMessage]);
+          return <TeacherDashboard />;
       }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Sorry, I encountered an error. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleVoiceInput = () => {
-    if (!isListening) {
-      setIsListening(true);
-      // Simulate voice input for demo
-      setTimeout(() => {
-        setInput("Explain Newton's Laws");
-        setIsListening(false);
-        notifications.show({
-          title: 'Voice Input',
-          message: 'Voice input captured!',
-          color: 'green',
-        });
-      }, 2000);
-    } else {
-      setIsListening(false);
-    }
-  };
+  const getFallbackResponse = (topic: string, difficulty: string): string => {
+    const responses: Record<string, Record<string, string>> = {
+      "newton": {
+        beginner: "Newton's Laws are like rules for how things move! The first law says things at rest stay at rest, and things moving keep moving unless something stops them. The second law says the harder you push something, the faster it goes. The third law says for every action, there's an equal and opposite reaction - like when you walk, you push back on the ground and it pushes you forward!",
+        intermediate: "Newton's Three Laws of Motion describe the relationship between forces and motion. The First Law (Inertia) states that objects remain at rest or in uniform motion unless acted upon by an external force. The Second Law relates force, mass, and acceleration (F=ma). The Third Law states that for every action, there is an equal and opposite reaction.",
+        advanced: "Newton's laws form the foundation of classical mechanics. The First Law defines inertial reference frames and the concept of inertia. The Second Law, F=ma, is actually F=dp/dt in its most general form. The Third Law reflects the conservation of momentum and is fundamental to understanding interactions between objects."
+      },
+      "photosynthesis": {
+        beginner: "Photosynthesis is how plants make their own food! They use sunlight, water, and carbon dioxide from the air to create sugar and oxygen. It's like plants are cooking their own meals using sunlight as their energy source!",
+        intermediate: "Photosynthesis is the process by which plants convert light energy into chemical energy. The equation is: 6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂. This occurs in chloroplasts and involves light-dependent and light-independent reactions.",
+        advanced: "Photosynthesis involves complex biochemical pathways including the light reactions in thylakoids (photosystems I and II, electron transport chain) and the Calvin cycle in the stroma. The process converts light energy to ATP and NADPH, which drive carbon fixation."
+      }
+    };
 
-  const handleTextToSpeech = (text: string) => {
-    if (isSpeaking) {
-      setIsSpeaking(false);
-      return;
+    const topicKey = Object.keys(responses).find(key => 
+      topic.toLowerCase().includes(key)
+    );
+
+    if (topicKey && responses[topicKey][difficulty]) {
+      return responses[topicKey][difficulty];
     }
 
-    setIsSpeaking(true);
-    // Simulate text-to-speech for demo
-    setTimeout(() => {
-      setIsSpeaking(false);
-      notifications.show({
-        title: 'Speech',
-        message: 'Speech completed!',
-        color: 'blue',
-      });
-    }, 3000);
+    return `I'd be happy to help you learn about ${topic}! This is a fascinating topic. While I'm having trouble accessing my full knowledge base right now, I can tell you that understanding ${topic} is important for building a strong foundation in your studies. Would you like me to suggest some specific questions about ${topic} that I might be able to help with?`;
   };
 
   return (
-    <Container size="lg">
-      <Paper shadow="sm" radius="md" withBorder style={{ height: 'calc(100vh - 120px)' }}>
-        {/* Header */}
-        <Group justify="space-between" p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
-          <Group>
-            <ThemeIcon size="lg" color="indigo" variant="light">
-              <IconBrain size={20} />
-            </ThemeIcon>
-            <div>
-              <Text fw={600} size="lg">
-                {t('aiTutor.title')}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t('aiTutor.subtitle')}
-              </Text>
-            </div>
-          </Group>
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Header opened={opened} toggle={toggle} />
+      </AppShell.Header>
 
-          <Group>
-            <Select
-              data={languages}
-              value={i18n.language}
-              onChange={(value) => value && i18n.changeLanguage(value)}
-              leftSection={<IconWorld size={16} />}
-              w={140}
-              size="xs"
-            />
-            <Select
-              data={[
-                { value: 'beginner', label: t('quiz.difficulty.beginner') },
-                { value: 'intermediate', label: t('quiz.difficulty.intermediate') },
-                { value: 'advanced', label: t('quiz.difficulty.advanced') },
-              ]}
-              value={difficulty}
-              onChange={(value) => value && setDifficulty(value)}
-              w={120}
-              size="xs"
-            />
-          </Group>
-        </Group>
+      <AppShell.Navbar p="md">
+        <ErrorBoundary>
+          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        </ErrorBoundary>
+      </AppShell.Navbar>
 
-        {/* Messages */}
-        <ScrollArea style={{ height: 'calc(100% - 140px)' }} p="md">
-          <Stack gap="md">
-            <AnimatePresence>
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  style={{
-                    display: 'flex',
-                    justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
-                  }}
-                >
-                  <Card
-                    shadow="sm"
-                    padding="md"
-                    radius="md"
-                    style={{
-                      maxWidth: '80%',
-                      backgroundColor: message.sender === 'user' 
-                        ? 'var(--mantine-color-indigo-6)' 
-                        : 'var(--mantine-color-gray-1)',
-                      color: message.sender === 'user' ? 'white' : 'inherit',
-                    }}
-                  >
-                    {message.sender === 'ai' && (
-                      <Group gap="xs" mb="xs">
-                        <IconBrain size={16} color="var(--mantine-color-indigo-6)" />
-                        <Text size="xs" fw={500} c="indigo">
-                          AI Tutor
-                        </Text>
-                        {message.type === 'quiz' && (
-                          <Badge size="xs" color="green">
-                            <IconTarget size={12} />
-                          </Badge>
-                        )}
-                        {message.type === 'explanation' && (
-                          <Badge size="xs" color="yellow">
-                            <IconBulb size={12} />
-                          </Badge>
-                        )}
-                      </Group>
-                    )}
-                    
-                    <Text size="sm" style={{ lineHeight: 1.5 }}>
-                      {message.content}
-                    </Text>
-
-                    {message.sender === 'ai' && (
-                      <Group justify="space-between" mt="sm" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
-                        <Group gap="xs">
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            onClick={() => handleTextToSpeech(message.content)}
-                          >
-                            {isSpeaking ? <IconVolumeOff size={14} /> : <IconVolume size={14} />}
-                          </ActionIcon>
-                          
-                          {message.type === 'explanation' && (
-                            <Button
-                              size="xs"
-                              variant="light"
-                              color="green"
-                              onClick={() => handleSend(`Create a quiz on ${message.content.slice(0, 50)}`)}
-                            >
-                              {t('aiTutor.createQuizButton')}
-                            </Button>
-                          )}
-                        </Group>
-                        
-                        <Text size="xs" c="dimmed">
-                          {message.timestamp.toLocaleTimeString()}
-                        </Text>
-                      </Group>
-                    )}
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                style={{ display: 'flex', justifyContent: 'flex-start' }}
-              >
-                <Card shadow="sm" padding="md" radius="md" style={{ backgroundColor: 'var(--mantine-color-gray-1)' }}>
-                  <Group gap="xs">
-                    <Loader size="sm" color="indigo" />
-                    <Text size="sm" c="dimmed">
-                      {t('aiTutor.thinking')}
-                    </Text>
-                  </Group>
-                </Card>
-              </motion.div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </Stack>
-        </ScrollArea>
-
-        {/* Quick Prompts */}
-        {messages.length === 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ padding: '0 1rem' }}
-          >
-            <Text size="sm" c="dimmed" mb="xs">
-              Try these quick prompts:
-            </Text>
-            <Group gap="xs">
-              {quickPrompts.map((prompt, index) => (
-                <Button
-                  key={index}
-                  size="xs"
-                  variant="light"
-                  leftSection={<IconBolt size={12} />}
-                  onClick={() => handleSend(prompt)}
-                >
-                  {prompt}
-                </Button>
-              ))}
-            </Group>
-          </motion.div>
-        )}
-
-        {/* Input */}
-        <Group p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
-          <TextInput
-            flex={1}
-            placeholder={t('aiTutor.askAnything')}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            disabled={isLoading}
-            rightSection={
-              <ActionIcon
-                onClick={handleVoiceInput}
-                color={isListening ? 'red' : 'gray'}
-                variant={isListening ? 'filled' : 'subtle'}
-              >
-                {isListening ? <IconMicrophoneOff size={16} /> : <IconMicrophone size={16} />}
-              </ActionIcon>
-            }
-          />
-          
-          <Button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
-            loading={isLoading}
-            leftSection={<IconSend size={16} />}
-          >
-            Send
-          </Button>
-        </Group>
-      </Paper>
-    </Container>
+      <AppShell.Main>
+        <Container size="xl" px="md">
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
   );
 };
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;

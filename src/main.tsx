@@ -1,75 +1,144 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { MantineProvider, createTheme } from '@mantine/core';
-import { Notifications } from '@mantine/notifications';
+import React, { useState } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AppShell, Container, LoadingOverlay } from '@mantine/core';
+import { useDisclosure, useColorScheme } from '@mantine/hooks';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import App from './App';
-import './i18n/config';
-import '@mantine/core/styles.css';
-import '@mantine/notifications/styles.css';
-import '@mantine/charts/styles.css';
-import '@mantine/dates/styles.css';
-import '@mantine/dropzone/styles.css';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginForm } from './components/Auth/LoginForm';
+import { Header } from './components/Layout/Header';
+import { Navbar } from './components/Layout/Navbar';
+import { StudentDashboard } from './components/Student/Dashboard';
+import { AITutor } from './components/Student/AITutor';
+import { QuizInterface } from './components/Student/QuizInterface';
+import { ProgressTracker } from './components/Student/ProgressTracker';
+import { TeacherDashboard } from './components/Teacher/Dashboard';
+import { LessonPlanner } from './components/Teacher/LessonPlanner';
+import { Analytics } from './components/Teacher/Analytics';
+import { StudentManagement } from './components/Teacher/StudentManagement';
 
-const theme = createTheme({
-  primaryColor: 'blue',
-  colors: {
-    student: [
-      '#f0f4ff',
-      '#d9e2ff',
-      '#b3c7ff',
-      '#8da9ff',
-      '#6b8eff',
-      '#4f46e5',
-      '#4338ca',
-      '#3730a3',
-      '#312e81',
-      '#1e1b4b',
-    ],
-    teacher: [
-      '#eff6ff',
-      '#dbeafe',
-      '#bfdbfe',
-      '#93c5fd',
-      '#60a5fa',
-      '#3b82f6',
-      '#2563eb',
-      '#1d4ed8',
-      '#1e40af',
-      '#1e3a8a',
-    ],
-  },
-  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
-  headings: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
-  },
-  components: {
-    Button: {
-      defaultProps: {
-        radius: 'md',
-      },
-    },
-    Card: {
-      defaultProps: {
-        radius: 'md',
-        shadow: 'sm',
-      },
-    },
-    Paper: {
-      defaultProps: {
-        radius: 'md',
-      },
-    },
-  },
-});
+const AppContent: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [opened, { toggle }] = useDisclosure();
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  const renderContent = () => {
+    if (user.role === 'student') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <StudentDashboard />;
+        case 'ai-tutor':
+          return <AITutor />;
+        case 'quizzes':
+          return <QuizInterface />;
+        case 'progress':
+          return <ProgressTracker />;
+        case 'library':
+          return <Container>Library coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+      <App />
+    </MantineProvider>
+  );
+}
+
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <StudentDashboard />;
+      }
+    } else {
+      switch (activeTab) {
+        case 'dashboard':
+          return <TeacherDashboard />;
+        case 'lesson-planner':
+          return <LessonPlanner />;
+        case 'analytics':
+          return <Analytics />;
+        case 'students':
+          return <StudentManagement />;
+        case 'resources':
+          return <Container>Resources coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <TeacherDashboard />;
+      }
+    }
+  };
+
+  return (
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Header opened={opened} toggle={toggle} />
+      </AppShell.Header>
+
+      <AppShell.Navbar p="md">
+        <ErrorBoundary>
+          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        </ErrorBoundary>
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        <Container size="xl" px="md">
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
+  );
+};
+
+function App() {
+  return (
     <ErrorBoundary>
-      <MantineProvider theme={theme} defaultColorScheme="light">
-        <Notifications position="top-right" />
-        <App />
-      </MantineProvider>
+      <AuthProvider>
+      <AppWithTheme />
     </ErrorBoundary>
-  </React.StrictMode>,
-);
+  );
+}
+
+export default App;

@@ -22,6 +22,18 @@ const AppContent: React.FC = () => {
   const [opened, { toggle }] = useDisclosure();
   const [activeTab, setActiveTab] = useState('dashboard');
 
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
   if (isLoading) {
     return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
   }
@@ -43,6 +55,10 @@ const AppContent: React.FC = () => {
           return <ProgressTracker />;
         case 'library':
           return <Container>Library coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
         default:
           return <StudentDashboard />;
       }
@@ -58,6 +74,8 @@ const AppContent: React.FC = () => {
           return <StudentManagement />;
         case 'resources':
           return <Container>Resources coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
         default:
           return <TeacherDashboard />;
       }

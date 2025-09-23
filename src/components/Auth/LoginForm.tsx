@@ -1,188 +1,142 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Container,
-  Paper,
-  Title,
-  Text,
-  TextInput,
-  PasswordInput,
-  Button,
-  Group,
-  Stack,
-  SegmentedControl,
-  Center,
-  Box,
-  ThemeIcon,
-} from '@mantine/core';
-import { useForm } from '@mantine/form';
-import { motion } from 'framer-motion';
-import { IconSchool, IconUser, IconBook } from '@tabler/icons-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AppShell, Container, LoadingOverlay } from '@mantine/core';
+import { useDisclosure, useColorScheme } from '@mantine/hooks';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginForm } from './components/Auth/LoginForm';
+import { Header } from './components/Layout/Header';
+import { Navbar } from './components/Layout/Navbar';
+import { StudentDashboard } from './components/Student/Dashboard';
+import { AITutor } from './components/Student/AITutor';
+import { QuizInterface } from './components/Student/QuizInterface';
+import { ProgressTracker } from './components/Student/ProgressTracker';
+import { TeacherDashboard } from './components/Teacher/Dashboard';
+import { LessonPlanner } from './components/Teacher/LessonPlanner';
+import { Analytics } from './components/Teacher/Analytics';
+import { StudentManagement } from './components/Teacher/StudentManagement';
 
-export const LoginForm: React.FC = () => {
-  const { t } = useTranslation();
-  const { login, register, isLoading } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [role, setRole] = useState<'student' | 'teacher'>('student');
+const AppContent: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [opened, { toggle }] = useDisclosure();
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-  const form = useForm({
-    initialValues: {
-      email: '',
-      password: '',
-      confirmPassword: '',
-      name: '',
-    },
-    validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
-      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
-      confirmPassword: (value, values) =>
-        mode === 'register' && value !== values.password ? 'Passwords do not match' : null,
-      name: (value) => (mode === 'register' && !value ? 'Name is required' : null),
-    },
-  });
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
 
-  const handleSubmit = async (values: typeof form.values) => {
-    try {
-      if (mode === 'login') {
-        await login(values.email, values.password);
-      } else {
-        await register(values.email, values.password, {
-          name: values.name,
-          role,
-          email: values.email,
-          preferences: {
-            language: 'en',
-            theme: 'light',
-            difficulty: 'intermediate',
-          },
-        });
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  const renderContent = () => {
+    if (user.role === 'student') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <StudentDashboard />;
+        case 'ai-tutor':
+          return <AITutor />;
+        case 'quizzes':
+          return <QuizInterface />;
+        case 'progress':
+          return <ProgressTracker />;
+        case 'library':
+          return <Container>Library coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <StudentDashboard />;
       }
-    } catch (error) {
-      // Error handling is done in the auth context
+    } else {
+      switch (activeTab) {
+        case 'dashboard':
+          return <TeacherDashboard />;
+        case 'lesson-planner':
+          return <LessonPlanner />;
+        case 'analytics':
+          return <Analytics />;
+        case 'students':
+          return <StudentManagement />;
+        case 'resources':
+          return <Container>Resources coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <TeacherDashboard />;
+      }
     }
   };
 
   return (
-    <Container size={420} my={40}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Center mb="xl">
-          <ThemeIcon size={60} radius="md" variant="gradient" gradient={{ from: 'indigo', to: 'purple' }}>
-            <IconSchool size={30} />
-          </ThemeIcon>
-        </Center>
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Header opened={opened} toggle={toggle} />
+      </AppShell.Header>
 
-        <Title ta="center" mb="md">
-          EduMentor AI
-        </Title>
+      <AppShell.Navbar p="md">
+        <ErrorBoundary>
+          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        </ErrorBoundary>
+      </AppShell.Navbar>
 
-        <Text c="dimmed" size="sm" ta="center" mb="xl">
-          {mode === 'login' ? t('auth.welcomeBack') : t('auth.createAccount')}
-        </Text>
-
-        <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-          <Stack>
-            <SegmentedControl
-              value={mode}
-              onChange={(value) => setMode(value as 'login' | 'register')}
-              data={[
-                { label: t('auth.login'), value: 'login' },
-                { label: t('auth.signup'), value: 'register' },
-              ]}
-              fullWidth
-            />
-
-            {mode === 'register' && (
-              <SegmentedControl
-                value={role}
-                onChange={(value) => setRole(value as 'student' | 'teacher')}
-                data={[
-                  {
-                    label: (
-                      <Center>
-                        <IconUser size={16} />
-                        <Box ml={10}>Student</Box>
-                      </Center>
-                    ),
-                    value: 'student',
-                  },
-                  {
-                    label: (
-                      <Center>
-                        <IconBook size={16} />
-                        <Box ml={10}>Teacher</Box>
-                      </Center>
-                    ),
-                    value: 'teacher',
-                  },
-                ]}
-                fullWidth
-              />
-            )}
-
-            <form onSubmit={form.onSubmit(handleSubmit)}>
-              <Stack>
-                {mode === 'register' && (
-                  <TextInput
-                    label="Name"
-                    placeholder="Your name"
-                    required
-                    {...form.getInputProps('name')}
-                  />
-                )}
-
-                <TextInput
-                  label={t('auth.email')}
-                  placeholder="your@email.com"
-                  required
-                  {...form.getInputProps('email')}
-                />
-
-                <PasswordInput
-                  label={t('auth.password')}
-                  placeholder="Your password"
-                  required
-                  {...form.getInputProps('password')}
-                />
-
-                {mode === 'register' && (
-                  <PasswordInput
-                    label={t('auth.confirmPassword')}
-                    placeholder="Confirm your password"
-                    required
-                    {...form.getInputProps('confirmPassword')}
-                  />
-                )}
-
-                <Button type="submit" fullWidth loading={isLoading} mt="xl">
-                  {mode === 'login' ? t('auth.login') : t('auth.signup')}
-                </Button>
-              </Stack>
-            </form>
-
-            <Text c="dimmed" size="sm" ta="center" mt="md">
-              {mode === 'login' ? t('auth.dontHaveAccount') : t('auth.alreadyHaveAccount')}{' '}
-              <Text
-                component="button"
-                type="button"
-                c="blue"
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              >
-                {mode === 'login' ? t('auth.signup') : t('auth.login')}
-              </Text>
-            </Text>
-
-            <Text c="dimmed" size="xs" ta="center" mt="md">
-              Demo: Use any email/password combination
-            </Text>
-          </Stack>
-        </Paper>
-      </motion.div>
-    </Container>
+      <AppShell.Main>
+        <Container size="xl" px="md">
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
   );
 };
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
