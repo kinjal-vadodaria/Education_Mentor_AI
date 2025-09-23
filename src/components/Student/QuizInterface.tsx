@@ -22,7 +22,7 @@ import {
   IconTrophy,
   IconStar,
   IconBrain,
-  IconZap,
+  IconBolt,
   IconRefresh,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -261,7 +261,7 @@ export const QuizInterface: React.FC = () => {
                       transition={{ delay: 0.5 + index * 0.1 }}
                     >
                       <Group gap="sm">
-                        <IconZap size={16} color="var(--mantine-color-indigo-6)" />
+                        <IconBolt size={16} color="var(--mantine-color-indigo-6)" />
                         <Text size="sm">{suggestion}</Text>
                       </Group>
                     </motion.div>

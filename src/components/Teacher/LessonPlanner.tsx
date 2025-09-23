@@ -32,7 +32,7 @@ import {
   IconEdit,
   IconPlus,
   IconWand,
-  IconCheckCircle,
+  IconCheck,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
@@ -221,7 +221,7 @@ export const LessonPlanner: React.FC = () => {
                   transition={{ delay: index * 0.1 }}
                 >
                   <Group gap="sm">
-                    <IconCheckCircle size={16} color="var(--mantine-color-green-6)" />
+                    <IconCheck size={16} color="var(--mantine-color-green-6)" />
                     <Text>{objective}</Text>
                   </Group>
                 </motion.div>

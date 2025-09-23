@@ -18,7 +18,7 @@ import {
   IconBell,
   IconSettings,
   IconLogout,
-  IconGraduationCap,
+  IconSchool,
   IconWorld,
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -68,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
                 : { from: 'blue', to: 'cyan' }
             }
           >
-            <IconGraduationCap size={20} />
+            <IconSchool size={20} />
           </ThemeIcon>
           
           <div>

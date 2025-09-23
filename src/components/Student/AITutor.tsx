@@ -23,10 +23,10 @@ import {
   IconVolume,
   IconVolumeOff,
   IconBrain,
-  IconLightbulb,
+  IconBulb,
   IconTarget,
   IconWorld,
-  IconZap,
+  IconBolt,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
@@ -263,7 +263,7 @@ export const AITutor: React.FC = () => {
                         )}
                         {message.type === 'explanation' && (
                           <Badge size="xs" color="yellow">
-                            <IconLightbulb size={12} />
+                            <IconBulb size={12} />
                           </Badge>
                         )}
                       </Group>
@@ -343,7 +343,7 @@ export const AITutor: React.FC = () => {
                   key={index}
                   size="xs"
                   variant="light"
-                  leftSection={<IconZap size={12} />}
+                  leftSection={<IconBolt size={12} />}
                   onClick={() => handleSend(prompt)}
                 >
                   {prompt}

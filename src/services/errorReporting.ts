@@ -9,8 +9,8 @@ interface ErrorReport {
 }
 
 class ErrorReportingService {
-  private isProduction = process.env.NODE_ENV === 'production';
-  private apiEndpoint = process.env.VITE_ERROR_REPORTING_ENDPOINT;
+  private isProduction = import.meta.env.MODE === 'production';
+  private apiEndpoint = import.meta.env.VITE_ERROR_REPORTING_ENDPOINT;
 
   async reportError(error: Error, additionalData?: Record<string, any>) {
     const errorReport: ErrorReport = {

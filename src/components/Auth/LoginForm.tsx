@@ -17,7 +17,7 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { motion } from 'framer-motion';
-import { IconGraduationCap, IconUser, IconBook } from '@tabler/icons-react';
+import { IconSchool, IconUser, IconBook } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const LoginForm: React.FC = () => {
@@ -72,7 +72,7 @@ export const LoginForm: React.FC = () => {
       >
         <Center mb="xl">
           <ThemeIcon size={60} radius="md" variant="gradient" gradient={{ from: 'indigo', to: 'purple' }}>
-            <IconGraduationCap size={30} />
+            <IconSchool size={30} />
           </ThemeIcon>
         </Center>
 

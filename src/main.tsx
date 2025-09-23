@@ -71,6 +71,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <App />
       </MantineProvider>
     </ErrorBoundary>
-    </MantineProvider>
   </React.StrictMode>,
 );

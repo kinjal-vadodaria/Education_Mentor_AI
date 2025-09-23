@@ -20,7 +20,7 @@ import {
   IconTrendingUp,
   IconClock,
   IconFileText,
-  IconCheckCircle,
+  IconCheck,
   IconAlertCircle,
   IconChartBar,
 } from '@tabler/icons-react';
@@ -74,7 +74,7 @@ export const TeacherDashboard: React.FC = () => {
       type: 'quiz_graded',
       title: 'Auto-graded 25 physics quizzes',
       time: '4 hours ago',
-      icon: IconCheckCircle,
+      icon: IconCheck,
       color: 'blue',
     },
     {
@@ -349,7 +349,7 @@ export const TeacherDashboard: React.FC = () => {
                 >
                   <Group>
                     <ThemeIcon color="green" variant="light" size="lg">
-                      <IconCheckCircle size={20} />
+                      <IconCheck size={20} />
                     </ThemeIcon>
                     <div>
                       <Text fw={500}>{t('teacher.gradeAssignments')}</Text>
