@@ -4,6 +4,11 @@ import { errorReporting } from './errorReporting';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || 'your-google-ai-api-key';
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 // Rate limiting
 class RateLimiter {
   private requests: number[] = [];
@@ -88,11 +93,6 @@ class AIService {
   private rateLimiter = new RateLimiter(10, 60000); // 10 requests per minute
   private cache = new Map<string, { data: any; timestamp: number }>();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
-
-  interface CacheEntry<T> {
-    data: T;
-    timestamp: number;
-  }
 
   constructor() {
     if (API_KEY && API_KEY !== 'your-google-ai-api-key') {
