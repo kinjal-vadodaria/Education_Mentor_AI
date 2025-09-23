@@ -1,0 +1,44 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "save": "Sauvegarder",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "submit": "Soumettre",
+    "close": "Fermer"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "signup": "S'inscrire",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "loginAsStudent": "Se connecter en tant qu'étudiant",
+    "loginAsTeacher": "Se connecter en tant que professeur",
+    "welcomeBack": "Bon retour !",
+    "createAccount": "Créer un compte",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "dontHaveAccount": "Vous n'avez pas de compte ?"
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "aiTutor": "Tuteur IA",
+    "quizzes": "Quiz",
+    "progress": "Progrès",
+    "library": "Bibliothèque",
+    "lessonPlanner": "Planificateur de cours",
+    "analytics": "Analyses",
+    "students": "Étudiants",
+    "resources": "Ressources",
+    "settings": "Paramètres"
+  }
+}

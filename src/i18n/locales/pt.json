@@ -1,0 +1,58 @@
+{
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "close": "Fechar"
+  },
+  "auth": {
+    "login": "Entrar",
+    "logout": "Sair",
+    "signup": "Cadastrar",
+    "email": "E-mail",
+    "password": "Senha",
+    "confirmPassword": "Confirmar Senha",
+    "forgotPassword": "Esqueceu a senha?",
+    "loginAsStudent": "Entrar como Estudante",
+    "loginAsTeacher": "Entrar como Professor",
+    "welcomeBack": "Bem-vindo de volta!",
+    "createAccount": "Criar Conta",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "dontHaveAccount": "Não tem uma conta?"
+  },
+  "navigation": {
+    "dashboard": "Painel",
+    "aiTutor": "Tutor IA",
+    "quizzes": "Questionários",
+    "progress": "Progresso",
+    "library": "Biblioteca",
+    "lessonPlanner": "Planejador de Aulas",
+    "analytics": "Análises",
+    "students": "Estudantes",
+    "resources": "Recursos",
+    "settings": "Configurações"
+  },
+  "student": {
+    "welcomeBack": "Bem-vindo de volta, {{name}}!",
+    "readyToLearn": "Pronto para continuar sua jornada de aprendizado?",
+    "currentLevel": "Nível Atual",
+    "learningStreak": "Sequência de Aprendizado",
+    "topicsCompleted": "Tópicos Concluídos",
+    "totalXP": "XP Total",
+    "recentActivities": "Atividades Recentes",
+    "aiRecommendations": "Recomendações da IA",
+    "quickActions": "Ações Rápidas",
+    "askAITutor": "Perguntar ao Tutor IA",
+    "takeQuiz": "Fazer Questionário",
+    "viewProgress": "Ver Progresso"
+  }
+}

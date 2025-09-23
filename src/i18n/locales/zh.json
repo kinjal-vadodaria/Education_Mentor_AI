@@ -1,0 +1,44 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "back": "返回",
+    "next": "下一个",
+    "previous": "上一个",
+    "submit": "提交",
+    "close": "关闭"
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "登出",
+    "signup": "注册",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "forgotPassword": "忘记密码？",
+    "loginAsStudent": "学生登录",
+    "loginAsTeacher": "教师登录",
+    "welcomeBack": "欢迎回来！",
+    "createAccount": "创建账户",
+    "alreadyHaveAccount": "已有账户？",
+    "dontHaveAccount": "没有账户？"
+  },
+  "navigation": {
+    "dashboard": "仪表板",
+    "aiTutor": "AI导师",
+    "quizzes": "测验",
+    "progress": "进度",
+    "library": "图书馆",
+    "lessonPlanner": "课程规划师",
+    "analytics": "分析",
+    "students": "学生",
+    "resources": "资源",
+    "settings": "设置"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "back": "戻る",
+    "next": "次へ",
+    "previous": "前へ",
+    "submit": "送信",
+    "close": "閉じる"
+  },
+  "auth": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "signup": "サインアップ",
+    "email": "メール",
+    "password": "パスワード",
+    "confirmPassword": "パスワード確認",
+    "forgotPassword": "パスワードを忘れましたか？",
+    "loginAsStudent": "学生としてログイン",
+    "loginAsTeacher": "教師としてログイン",
+    "welcomeBack": "おかえりなさい！",
+    "createAccount": "アカウント作成",
+    "alreadyHaveAccount": "既にアカウントをお持ちですか？",
+    "dontHaveAccount": "アカウントをお持ちでないですか？"
+  },
+  "navigation": {
+    "dashboard": "ダッシュボード",
+    "aiTutor": "AIチューター",
+    "quizzes": "クイズ",
+    "progress": "進捗",
+    "library": "ライブラリ",
+    "lessonPlanner": "レッスンプランナー",
+    "analytics": "分析",
+    "students": "学生",
+    "resources": "リソース",
+    "settings": "設定"
+  }
+}

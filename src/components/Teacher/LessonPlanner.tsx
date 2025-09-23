@@ -1,66 +1,99 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  Button,
+  Group,
+  Stack,
+  Card,
+  Grid,
+  ThemeIcon,
+  Badge,
+  Modal,
+  TextInput,
+  Select,
+  NumberInput,
+  Timeline,
+  Loader,
+  Center,
+} from '@mantine/core';
+import { useForm } from '@mantine/form';
+import {
+  IconFileText,
+  IconClock,
+  IconUsers,
+  IconTarget,
+  IconBook,
+  IconDownload,
+  IconShare,
+  IconEdit,
+  IconPlus,
+  IconWand,
+  IconCheck,
+} from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FileText, 
-  Clock, 
-  Users, 
-  Target, 
-  BookOpen,
-  Download,
-  Share,
-  Edit,
-  Plus,
-  Wand2,
-  CheckCircle
-} from 'lucide-react';
-import { LessonPlan } from '../../types';
-import { aiService } from '../../services/aiService';
-import { cn } from '../../utils/cn';
-import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
+import { aiService, LessonPlan } from '../../services/aiService';
+import { notifications } from '@mantine/notifications';
 
 export const LessonPlanner: React.FC = () => {
+  const { t } = useTranslation();
+  const { user } = useAuth();
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null);
-  
-  // Form state
-  const [topic, setTopic] = useState('');
-  const [subject, setSubject] = useState('Physics');
-  const [grade, setGrade] = useState('10');
-  const [duration, setDuration] = useState(45);
+
+  const form = useForm({
+    initialValues: {
+      topic: '',
+      subject: 'Physics',
+      grade: '10',
+      duration: 45,
+    },
+    validate: {
+      topic: (value) => (!value ? 'Topic is required' : null),
+    },
+  });
 
   const subjects = ['Physics', 'Mathematics', 'Chemistry', 'Biology', 'History', 'Literature'];
   const grades = ['6', '7', '8', '9', '10', '11', '12'];
 
-  const generateLessonPlan = async () => {
-    if (!topic.trim()) {
-      toast.error('Please enter a topic');
-      return;
-    }
-
+  const generateLessonPlan = async (values: typeof form.values) => {
     setIsGenerating(true);
     try {
-      const plan = await aiService.generateLessonPlan(topic, grade, duration);
-      plan.subject = subject;
+      const plan = await aiService.generateLessonPlan(
+        values.topic,
+        values.grade,
+        values.duration,
+        values.subject
+      );
+      
       setLessonPlans(prev => [plan, ...prev]);
       setSelectedPlan(plan);
       setShowGenerator(false);
+      form.reset();
       
-      // Reset form
-      setTopic('');
-      setSubject('Physics');
-      setGrade('10');
-      setDuration(45);
-      
-      toast.success('Lesson plan generated successfully!');
+      notifications.show({
+        title: 'Success',
+        message: 'Lesson plan generated successfully!',
+        color: 'green',
+      });
     } catch (error) {
-      toast.error('Failed to generate lesson plan. Please try again.');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to generate lesson plan. Please try again.',
+        color: 'red',
+      });
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Sample lesson plans for demo
   const samplePlans: LessonPlan[] = [
     {
       id: '1',
@@ -71,7 +104,7 @@ export const LessonPlanner: React.FC = () => {
       objectives: [
         'Students will understand the three laws of motion',
         'Students will apply Newton\'s laws to real-world scenarios',
-        'Students will solve basic physics problems'
+        'Students will solve basic physics problems',
       ],
       materials: ['Whiteboard', 'Toy cars', 'Ramps', 'Balls', 'Video clips'],
       activities: [
@@ -80,79 +113,62 @@ export const LessonPlanner: React.FC = () => {
           name: 'Introduction Hook',
           description: 'Demonstrate with toy cars and ramps',
           duration: 10,
-          type: 'presentation'
+          type: 'presentation',
         },
         {
           id: '2',
           name: 'Concept Explanation',
           description: 'Explain each law with examples',
           duration: 20,
-          type: 'presentation'
+          type: 'presentation',
         },
         {
           id: '3',
           name: 'Hands-on Activity',
           description: 'Students experiment with objects',
           duration: 10,
-          type: 'hands-on'
+          type: 'hands-on',
         },
         {
           id: '4',
           name: 'Wrap-up Discussion',
           description: 'Review and Q&A',
           duration: 5,
-          type: 'discussion'
-        }
+          type: 'discussion',
+        },
       ],
       assessment: 'Exit ticket with 3 questions about Newton\'s laws',
-      createdBy: 'ai-assistant',
-      createdAt: new Date()
-    }
+      createdAt: new Date(),
+    },
   ];
 
   const allPlans = [...lessonPlans, ...samplePlans];
 
   if (selectedPlan) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <Container size="lg">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+        <Group justify="space-between" mb="xl">
+          <Button
+            variant="outline"
             onClick={() => setSelectedPlan(null)}
-            className="btn-secondary"
+            leftSection={<IconFileText size={16} />}
           >
             ← Back to Plans
-          </motion.button>
+          </Button>
           
-          <div className="flex space-x-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-secondary"
-            >
-              <Edit className="h-4 w-4 mr-2" />
+          <Group>
+            <Button variant="outline" leftSection={<IconEdit size={16} />}>
               Edit
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-secondary"
-            >
-              <Share className="h-4 w-4 mr-2" />
+            </Button>
+            <Button variant="outline" leftSection={<IconShare size={16} />}>
               Share
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-primary"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </motion.button>
-          </div>
-        </div>
+            </Button>
+            <Button leftSection={<IconDownload size={16} />}>
+              Export PDF
+            </Button>
+          </Group>
+        </Group>
 
         {/* Lesson Plan Details */}
         <motion.div
@@ -161,368 +177,327 @@ export const LessonPlanner: React.FC = () => {
           className="space-y-6"
         >
           {/* Title Section */}
-          <div className="card">
-            <div className="flex items-start justify-between">
+          <Paper shadow="sm" p="xl" radius="md" withBorder>
+            <Group justify="space-between" align="flex-start">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                <Title order={2} mb="sm">
                   {selectedPlan.title}
-                </h1>
-                <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="flex items-center">
-                    <BookOpen className="h-4 w-4 mr-1" />
-                    {selectedPlan.subject}
-                  </span>
-                  <span className="flex items-center">
-                    <Users className="h-4 w-4 mr-1" />
-                    Grade {selectedPlan.grade}
-                  </span>
-                  <span className="flex items-center">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {selectedPlan.duration} minutes
-                  </span>
-                </div>
+                </Title>
+                <Group gap="md">
+                  <Group gap="xs">
+                    <IconBook size={16} />
+                    <Text size="sm" c="dimmed">{selectedPlan.subject}</Text>
+                  </Group>
+                  <Group gap="xs">
+                    <IconUsers size={16} />
+                    <Text size="sm" c="dimmed">Grade {selectedPlan.grade}</Text>
+                  </Group>
+                  <Group gap="xs">
+                    <IconClock size={16} />
+                    <Text size="sm" c="dimmed">{selectedPlan.duration} minutes</Text>
+                  </Group>
+                </Group>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Created {selectedPlan.createdAt.toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </div>
+              <Text size="sm" c="dimmed">
+                Created {selectedPlan.createdAt.toLocaleDateString()}
+              </Text>
+            </Group>
+          </Paper>
 
           {/* Learning Objectives */}
-          <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-              <Target className="h-5 w-5 mr-2 text-teacher-primary" />
-              Learning Objectives
-            </h2>
-            <ul className="space-y-2">
+          <Paper shadow="sm" p="lg" radius="md" withBorder>
+            <Group mb="md">
+              <ThemeIcon color="blue" variant="light">
+                <IconTarget size={20} />
+              </ThemeIcon>
+              <Title order={4}>Learning Objectives</Title>
+            </Group>
+            <Stack gap="sm">
               {selectedPlan.objectives.map((objective, index) => (
-                <motion.li
+                <motion.div
                   key={index}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="flex items-start space-x-2"
                 >
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 dark:text-gray-300">{objective}</span>
-                </motion.li>
+                  <Group gap="sm">
+                    <IconCheck size={16} color="var(--mantine-color-green-6)" />
+                    <Text>{objective}</Text>
+                  </Group>
+                </motion.div>
               ))}
-            </ul>
-          </div>
+            </Stack>
+          </Paper>
 
           {/* Materials */}
-          <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          <Paper shadow="sm" p="lg" radius="md" withBorder>
+            <Title order={4} mb="md">
               Required Materials
-            </h2>
-            <div className="flex flex-wrap gap-2">
+            </Title>
+            <Group gap="xs">
               {selectedPlan.materials.map((material, index) => (
-                <motion.span
+                <motion.div
                   key={index}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className="px-3 py-1 bg-teacher-primary/10 text-teacher-primary rounded-full text-sm"
                 >
-                  {material}
-                </motion.span>
-              ))}
-            </div>
-          </div>
-
-          {/* Activities Timeline */}
-          <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Lesson Activities
-            </h2>
-            <div className="space-y-4">
-              {selectedPlan.activities.map((activity, index) => (
-                <motion.div
-                  key={activity.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                >
-                  <div className="flex-shrink-0">
-                    <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold",
-                      activity.type === 'presentation' ? 'bg-blue-500' :
-                      activity.type === 'hands-on' ? 'bg-green-500' :
-                      activity.type === 'discussion' ? 'bg-purple-500' :
-                      'bg-orange-500'
-                    )}>
-                      {index + 1}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                        {activity.name}
-                      </h3>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {activity.duration} min
-                      </span>
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      {activity.description}
-                    </p>
-                    <span className={cn(
-                      "inline-block mt-2 px-2 py-1 text-xs rounded-full",
-                      activity.type === 'presentation' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
-                      activity.type === 'hands-on' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                      activity.type === 'discussion' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400' :
-                      'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
-                    )}>
-                      {activity.type}
-                    </span>
-                  </div>
+                  <Badge variant="light" color="blue">
+                    {material}
+                  </Badge>
                 </motion.div>
               ))}
-            </div>
-          </div>
+            </Group>
+          </Paper>
+
+          {/* Activities Timeline */}
+          <Paper shadow="sm" p="lg" radius="md" withBorder>
+            <Title order={4} mb="md">
+              Lesson Activities
+            </Title>
+            <Timeline active={selectedPlan.activities.length - 1} bulletSize={24} lineWidth={2}>
+              {selectedPlan.activities.map((activity, index) => (
+                <Timeline.Item
+                  key={activity.id}
+                  bullet={
+                    <ThemeIcon
+                      size="sm"
+                      color={
+                        activity.type === 'presentation' ? 'blue' :
+                        activity.type === 'hands-on' ? 'green' :
+                        activity.type === 'discussion' ? 'purple' : 'orange'
+                      }
+                      variant="light"
+                    >
+                      {index + 1}
+                    </ThemeIcon>
+                  }
+                  title={
+                    <Group justify="space-between">
+                      <Text fw={500}>{activity.name}</Text>
+                      <Badge size="sm" variant="light">
+                        {activity.duration} min
+                      </Badge>
+                    </Group>
+                  }
+                >
+                  <Text size="sm" c="dimmed" mb="xs">
+                    {activity.description}
+                  </Text>
+                  <Badge
+                    size="xs"
+                    color={
+                      activity.type === 'presentation' ? 'blue' :
+                      activity.type === 'hands-on' ? 'green' :
+                      activity.type === 'discussion' ? 'purple' : 'orange'
+                    }
+                    variant="light"
+                  >
+                    {activity.type}
+                  </Badge>
+                </Timeline.Item>
+              ))}
+            </Timeline>
+          </Paper>
 
           {/* Assessment */}
-          <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          <Paper shadow="sm" p="lg" radius="md" withBorder>
+            <Title order={4} mb="md">
               Assessment Strategy
-            </h2>
-            <p className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              {selectedPlan.assessment}
-            </p>
-          </div>
+            </Title>
+            <Paper p="md" withBorder style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+              <Text>{selectedPlan.assessment}</Text>
+            </Paper>
+          </Paper>
         </motion.div>
-      </div>
+      </Container>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            AI Lesson Planner
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Generate comprehensive lesson plans with AI assistance
-          </p>
-        </div>
-        
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowGenerator(true)}
-          className="btn-primary"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create New Plan
-        </motion.button>
-      </div>
+    <Container size="xl">
+      <Stack gap="xl">
+        {/* Header */}
+        <Group justify="space-between">
+          <div>
+            <Title order={2}>{t('lessonPlanner.title')}</Title>
+            <Text c="dimmed" size="lg">
+              {t('lessonPlanner.subtitle')}
+            </Text>
+          </div>
+          
+          <Button
+            onClick={() => setShowGenerator(true)}
+            leftSection={<IconPlus size={16} />}
+            variant="gradient"
+            gradient={{ from: 'blue', to: 'cyan' }}
+          >
+            {t('lessonPlanner.createNew')}
+          </Button>
+        </Group>
 
-      {/* Generator Modal */}
-      <AnimatePresence>
-        {showGenerator && (
+        {/* Generator Modal */}
+        <Modal
+          opened={showGenerator}
+          onClose={() => setShowGenerator(false)}
+          title={
+            <Group>
+              <IconWand size={20} />
+              <Text fw={600}>{t('lessonPlanner.generatePlan')}</Text>
+            </Group>
+          }
+          size="md"
+        >
+          <form onSubmit={form.onSubmit(generateLessonPlan)}>
+            <Stack gap="md">
+              <TextInput
+                label={t('lessonPlanner.topic')}
+                placeholder="e.g., Newton's Laws of Motion"
+                {...form.getInputProps('topic')}
+              />
+
+              <Grid>
+                <Grid.Col span={6}>
+                  <Select
+                    label={t('lessonPlanner.subject')}
+                    data={subjects}
+                    {...form.getInputProps('subject')}
+                  />
+                </Grid.Col>
+                <Grid.Col span={6}>
+                  <Select
+                    label={t('lessonPlanner.grade')}
+                    data={grades.map(g => ({ value: g, label: `Grade ${g}` }))}
+                    {...form.getInputProps('grade')}
+                  />
+                </Grid.Col>
+              </Grid>
+
+              <NumberInput
+                label={t('lessonPlanner.duration')}
+                min={15}
+                max={120}
+                step={15}
+                {...form.getInputProps('duration')}
+              />
+
+              <Group justify="flex-end" mt="md">
+                <Button variant="outline" onClick={() => setShowGenerator(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  type="submit"
+                  loading={isGenerating}
+                  leftSection={<IconWand size={16} />}
+                >
+                  {isGenerating ? 'Generating...' : t('lessonPlanner.generatePlan')}
+                </Button>
+              </Group>
+            </Stack>
+          </form>
+        </Modal>
+
+        {/* Lesson Plans Grid */}
+        {allPlans.length > 0 ? (
+          <Grid>
+            {allPlans.map((plan, index) => (
+              <Grid.Col key={plan.id} span={{ base: 12, md: 6, lg: 4 }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Card
+                    shadow="sm"
+                    padding="lg"
+                    radius="md"
+                    withBorder
+                    style={{ cursor: 'pointer', height: '100%' }}
+                    onClick={() => setSelectedPlan(plan)}
+                  >
+                    <Stack gap="md">
+                      <Group justify="space-between" align="flex-start">
+                        <ThemeIcon color="blue" variant="light" size="lg">
+                          <IconFileText size={20} />
+                        </ThemeIcon>
+                        <Text size="xs" c="dimmed">
+                          {plan.createdAt.toLocaleDateString()}
+                        </Text>
+                      </Group>
+
+                      <div>
+                        <Title order={5} mb="xs" lineClamp={2}>
+                          {plan.title}
+                        </Title>
+                        
+                        <Group gap="md" mb="sm">
+                          <Group gap="xs">
+                            <IconBook size={14} />
+                            <Text size="xs" c="dimmed">{plan.subject}</Text>
+                          </Group>
+                          <Group gap="xs">
+                            <IconClock size={14} />
+                            <Text size="xs" c="dimmed">{plan.duration}m</Text>
+                          </Group>
+                        </Group>
+                      </div>
+
+                      <Stack gap="xs">
+                        <Text size="sm" c="dimmed">
+                          {plan.objectives.length} learning objectives
+                        </Text>
+                        <Text size="sm" c="dimmed">
+                          {plan.activities.length} activities planned
+                        </Text>
+                      </Stack>
+
+                      <Group justify="center" c="blue" style={{ opacity: 0.8 }}>
+                        <IconFileText size={16} />
+                        <Text size="sm" fw={500}>
+                          {t('lessonPlanner.viewDetails')}
+                        </Text>
+                      </Group>
+                    </Stack>
+                  </Card>
+                </motion.div>
+              </Grid.Col>
+            ))}
+          </Grid>
+        ) : (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowGenerator(false)}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  Generate Lesson Plan
-                </h2>
-                <Wand2 className="h-6 w-6 text-teacher-primary" />
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Topic
-                  </label>
-                  <input
-                    type="text"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    placeholder="e.g., Newton's Laws of Motion"
-                    className="input-field"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Subject
-                    </label>
-                    <select
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      className="input-field"
+            <Paper shadow="sm" p="xl" radius="md" withBorder>
+              <Center>
+                <Stack align="center" gap="md">
+                  <ThemeIcon size={80} color="gray" variant="light">
+                    <IconFileText size={40} />
+                  </ThemeIcon>
+                  <div style={{ textAlign: 'center' }}>
+                    <Title order={4} mb="xs">
+                      {t('lessonPlanner.noPlansYet')}
+                    </Title>
+                    <Text c="dimmed" mb="lg">
+                      {t('lessonPlanner.createFirst')}
+                    </Text>
+                    <Button
+                      onClick={() => setShowGenerator(true)}
+                      leftSection={<IconWand size={16} />}
+                      variant="gradient"
+                      gradient={{ from: 'blue', to: 'cyan' }}
                     >
-                      {subjects.map(subj => (
-                        <option key={subj} value={subj}>{subj}</option>
-                      ))}
-                    </select>
+                      {t('lessonPlanner.generatePlan')}
+                    </Button>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Grade
-                    </label>
-                    <select
-                      value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
-                      className="input-field"
-                    >
-                      {grades.map(g => (
-                        <option key={g} value={g}>Grade {g}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Duration (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                    min="15"
-                    max="120"
-                    step="15"
-                    className="input-field"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 mt-6">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowGenerator(false)}
-                  className="flex-1 btn-secondary"
-                >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={generateLessonPlan}
-                  disabled={isGenerating || !topic.trim()}
-                  className={cn(
-                    "flex-1 btn-primary",
-                    (isGenerating || !topic.trim()) && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  {isGenerating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      Generate
-                    </>
-                  )}
-                </motion.button>
-              </div>
-            </motion.div>
+                </Stack>
+              </Center>
+            </Paper>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* Lesson Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {allPlans.map((plan, index) => (
-          <motion.div
-            key={plan.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="card hover:shadow-xl cursor-pointer group"
-            onClick={() => setSelectedPlan(plan)}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-2 bg-teacher-primary/10 rounded-lg">
-                <FileText className="h-6 w-6 text-teacher-primary" />
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {plan.createdAt.toLocaleDateString()}
-              </span>
-            </div>
-
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-teacher-primary transition-colors">
-              {plan.title}
-            </h3>
-
-            <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400 mb-4">
-              <span className="flex items-center">
-                <BookOpen className="h-3 w-3 mr-1" />
-                {plan.subject}
-              </span>
-              <span className="flex items-center">
-                <Clock className="h-3 w-3 mr-1" />
-                {plan.duration}m
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {plan.objectives.length} learning objectives
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {plan.activities.length} activities planned
-              </p>
-            </div>
-
-            <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="flex items-center justify-center space-x-2 text-sm text-teacher-primary">
-                <FileText className="h-4 w-4" />
-                <span>View Details</span>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {allPlans.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-12"
-        >
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-            No lesson plans yet
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Create your first AI-generated lesson plan to get started
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowGenerator(true)}
-            className="btn-primary"
-          >
-            <Wand2 className="h-4 w-4 mr-2" />
-            Generate Lesson Plan
-          </motion.button>
-        </motion.div>
-      )}
-    </div>
+      </Stack>
+    </Container>
   );
 };

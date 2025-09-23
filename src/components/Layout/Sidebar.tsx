@@ -1,86 +1,84 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { 
-  Home,
-  MessageCircle,
-  BookOpen,
-  Trophy,
-  BarChart3,
-  Users,
-  FileText,
-  Settings,
-  Brain,
-  Target
-} from 'lucide-react';
+import { Stack, NavLink, Text, ThemeIcon } from '@mantine/core';
+import {
+  IconHome,
+  IconBrain,
+  IconTarget,
+  IconTrophy,
+  IconBook,
+  IconFileText,
+  IconChartBar,
+  IconUsers,
+  IconFolder,
+} from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../utils/cn';
 
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  className?: string;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, className }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const isStudent = user?.role === 'student';
 
   const studentTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'tutor', label: 'AI Tutor', icon: Brain },
-    { id: 'quizzes', label: 'Quizzes', icon: Target },
-    { id: 'progress', label: 'Progress', icon: Trophy },
-    { id: 'library', label: 'Library', icon: BookOpen },
+    { id: 'dashboard', label: t('navigation.dashboard'), icon: IconHome },
+    { id: 'ai-tutor', label: t('navigation.aiTutor'), icon: IconBrain },
+    { id: 'quizzes', label: t('navigation.quizzes'), icon: IconTarget },
+    { id: 'progress', label: t('navigation.progress'), icon: IconTrophy },
+    { id: 'library', label: t('navigation.library'), icon: IconBook },
   ];
 
   const teacherTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'lesson-planner', label: 'Lesson Planner', icon: FileText },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'students', label: 'Students', icon: Users },
-    { id: 'resources', label: 'Resources', icon: BookOpen },
+    { id: 'dashboard', label: t('navigation.dashboard'), icon: IconHome },
+    { id: 'lesson-planner', label: t('navigation.lessonPlanner'), icon: IconFileText },
+    { id: 'analytics', label: t('navigation.analytics'), icon: IconChartBar },
+    { id: 'students', label: t('navigation.students'), icon: IconUsers },
+    { id: 'resources', label: t('navigation.resources'), icon: IconFolder },
   ];
 
-  const tabs = isStudent ? studentTabs : teacherTabs;
+  const tabs = user?.role === 'student' ? studentTabs : teacherTabs;
+  const primaryColor = user?.role === 'student' ? 'indigo' : 'blue';
 
   return (
-    <aside className={cn(
-      "w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full",
-      className
-    )}>
-      <div className="p-6">
-        <nav className="space-y-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            
-            return (
-              <motion.button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200",
-                  isActive
-                    ? isStudent
-                      ? "bg-gradient-to-r from-student-primary/10 to-student-secondary/10 text-student-primary border-l-4 border-student-primary"
-                      : "bg-gradient-to-r from-teacher-primary/10 to-teacher-secondary/10 text-teacher-primary border-l-4 border-teacher-primary"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
-                )}
-              >
-                <Icon className={cn(
-                  "h-5 w-5",
-                  isActive 
-                    ? isStudent ? "text-student-primary" : "text-teacher-primary"
-                    : "text-gray-500 dark:text-gray-400"
-                )} />
-                <span className="font-medium">{tab.label}</span>
-              </motion.button>
-            );
-          })}
-        </nav>
-      </div>
-    </aside>
+    <Stack gap="xs">
+      <Text size="xs" tt="uppercase" fw={700} c="dimmed" px="sm">
+        {t('common.navigation')}
+      </Text>
+      
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        
+        return (
+          <motion.div
+            key={tab.id}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <NavLink
+              active={isActive}
+              label={tab.label}
+              leftSection={
+                <ThemeIcon
+                  size="sm"
+                  variant={isActive ? 'filled' : 'light'}
+                  color={primaryColor}
+                >
+                  <Icon size={16} />
+                </ThemeIcon>
+              }
+              onClick={() => onTabChange(tab.id)}
+              style={{
+                borderRadius: 8,
+              }}
+            />
+          </motion.div>
+        );
+      })}
+    </Stack>
   );
 };

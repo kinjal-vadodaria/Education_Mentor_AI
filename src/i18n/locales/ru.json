@@ -1,0 +1,44 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "success": "Успех",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "back": "Назад",
+    "next": "Далее",
+    "previous": "Назад",
+    "submit": "Отправить",
+    "close": "Закрыть"
+  },
+  "auth": {
+    "login": "Войти",
+    "logout": "Выйти",
+    "signup": "Регистрация",
+    "email": "Электронная почта",
+    "password": "Пароль",
+    "confirmPassword": "Подтвердить пароль",
+    "forgotPassword": "Забыли пароль?",
+    "loginAsStudent": "Войти как студент",
+    "loginAsTeacher": "Войти как преподаватель",
+    "welcomeBack": "Добро пожаловать!",
+    "createAccount": "Создать аккаунт",
+    "alreadyHaveAccount": "Уже есть аккаунт?",
+    "dontHaveAccount": "Нет аккаунта?"
+  },
+  "navigation": {
+    "dashboard": "Панель управления",
+    "aiTutor": "ИИ-наставник",
+    "quizzes": "Викторины",
+    "progress": "Прогресс",
+    "library": "Библиотека",
+    "lessonPlanner": "Планировщик уроков",
+    "analytics": "Аналитика",
+    "students": "Студенты",
+    "resources": "Ресурсы",
+    "settings": "Настройки"
+  }
+}

@@ -1,28 +1,29 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { AppShell, Container, LoadingOverlay } from '@mantine/core';
+import { useDisclosure, useColorScheme } from '@mantine/hooks';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { Header } from './components/Layout/Header';
-import { Sidebar } from './components/Layout/Sidebar';
+import { Navbar } from './components/Layout/Navbar';
 import { StudentDashboard } from './components/Student/Dashboard';
 import { AITutor } from './components/Student/AITutor';
 import { QuizInterface } from './components/Student/QuizInterface';
+import { ProgressTracker } from './components/Student/ProgressTracker';
 import { TeacherDashboard } from './components/Teacher/Dashboard';
 import { LessonPlanner } from './components/Teacher/LessonPlanner';
-import { cn } from './utils/cn';
+import { Analytics } from './components/Teacher/Analytics';
+import { StudentManagement } from './components/Teacher/StudentManagement';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
+  const [opened, { toggle }] = useDisclosure();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
   }
 
   if (!user) {
@@ -34,14 +35,14 @@ const AppContent: React.FC = () => {
       switch (activeTab) {
         case 'dashboard':
           return <StudentDashboard />;
-        case 'tutor':
+        case 'ai-tutor':
           return <AITutor />;
         case 'quizzes':
           return <QuizInterface />;
         case 'progress':
-          return <div className="p-8 text-center text-gray-500">Progress tracking coming soon...</div>;
+          return <ProgressTracker />;
         case 'library':
-          return <div className="p-8 text-center text-gray-500">Learning library coming soon...</div>;
+          return <Container>Library coming soon...</Container>;
         default:
           return <StudentDashboard />;
       }
@@ -52,11 +53,11 @@ const AppContent: React.FC = () => {
         case 'lesson-planner':
           return <LessonPlanner />;
         case 'analytics':
-          return <div className="p-8 text-center text-gray-500">Analytics dashboard coming soon...</div>;
+          return <Analytics />;
         case 'students':
-          return <div className="p-8 text-center text-gray-500">Student management coming soon...</div>;
+          return <StudentManagement />;
         case 'resources':
-          return <div className="p-8 text-center text-gray-500">Teaching resources coming soon...</div>;
+          return <Container>Resources coming soon...</Container>;
         default:
           return <TeacherDashboard />;
       }
@@ -64,42 +65,45 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
-      <div className="flex h-[calc(100vh-4rem)]">
-        <Sidebar 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
-        />
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Header opened={opened} toggle={toggle} />
+      </AppShell.Header>
+
+      <AppShell.Navbar p="md">
+        <ErrorBoundary>
+          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+        </ErrorBoundary>
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        <Container size="xl" px="md">
+          <ErrorBoundary>
             {renderContent()}
-          </div>
-        </main>
-      </div>
-    </div>
+          </ErrorBoundary>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
   );
 };
 
 function App() {
   return (
-    <ThemeProvider>
+    <ErrorBoundary>
       <AuthProvider>
         <Router>
           <AppContent />
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: 'var(--toast-bg)',
-                color: 'var(--toast-color)',
-              },
-            }}
-          />
         </Router>
       </AuthProvider>
-    </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

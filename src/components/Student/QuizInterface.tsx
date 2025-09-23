@@ -1,22 +1,38 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  Button,
+  Group,
+  Stack,
+  Progress,
+  Card,
+  Grid,
+  ThemeIcon,
+  Badge,
+  Center,
+  Loader,
+} from '@mantine/core';
+import {
+  IconTarget,
+  IconClock,
+  IconTrophy,
+  IconStar,
+  IconBrain,
+  IconBolt,
+  IconRefresh,
+} from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Target, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Trophy,
-  RefreshCw,
-  Brain,
-  Zap,
-  Star
-} from 'lucide-react';
-import { Quiz, Question, QuizResult } from '../../types';
-import { aiService } from '../../services/aiService';
-import { cn } from '../../utils/cn';
-import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
+import { aiService, Quiz, Question } from '../../services/aiService';
+import { notifications } from '@mantine/notifications';
 
 export const QuizInterface: React.FC = () => {
+  const { t } = useTranslation();
+  const { user } = useAuth();
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -26,12 +42,12 @@ export const QuizInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const topics = [
-    { name: "Newton's Laws", difficulty: 'intermediate', icon: '⚡' },
-    { name: 'Photosynthesis', difficulty: 'beginner', icon: '🌱' },
-    { name: 'Algebra Basics', difficulty: 'intermediate', icon: '📐' },
-    { name: 'World History', difficulty: 'advanced', icon: '🏛️' },
-    { name: 'Chemistry Bonds', difficulty: 'advanced', icon: '🧪' },
-    { name: 'Literature Analysis', difficulty: 'intermediate', icon: '📚' }
+    { name: "Newton's Laws", difficulty: 'intermediate', icon: '⚡', color: 'blue' },
+    { name: 'Photosynthesis', difficulty: 'beginner', icon: '🌱', color: 'green' },
+    { name: 'Algebra Basics', difficulty: 'intermediate', icon: '📐', color: 'orange' },
+    { name: 'World History', difficulty: 'advanced', icon: '🏛️', color: 'purple' },
+    { name: 'Chemistry Bonds', difficulty: 'advanced', icon: '🧪', color: 'red' },
+    { name: 'Literature Analysis', difficulty: 'intermediate', icon: '📚', color: 'teal' },
   ];
 
   useEffect(() => {
@@ -46,15 +62,23 @@ export const QuizInterface: React.FC = () => {
   const startQuiz = async (topic: string, difficulty: string) => {
     setIsLoading(true);
     try {
-      const quiz = await aiService.generateQuiz(topic, difficulty);
+      const quiz = await aiService.generateQuiz(topic, difficulty, 5, user?.id);
       setCurrentQuiz(quiz);
       setCurrentQuestionIndex(0);
       setAnswers({});
       setShowResults(false);
       setTimeLeft(quiz.timeLimit || 300);
-      toast.success(`Quiz started: ${topic}`);
+      notifications.show({
+        title: 'Quiz Started',
+        message: `Quiz started: ${topic}`,
+        color: 'green',
+      });
     } catch (error) {
-      toast.error('Failed to generate quiz. Please try again.');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to generate quiz. Please try again.',
+        color: 'red',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -83,20 +107,36 @@ export const QuizInterface: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const result = await aiService.gradeQuiz(currentQuiz, answers);
+      const result = await aiService.gradeQuiz(currentQuiz, answers, user?.id);
       setQuizResult(result);
       setShowResults(true);
       
       const percentage = (result.score / result.totalPoints) * 100;
       if (percentage >= 90) {
-        toast.success('Excellent work! 🎉');
+        notifications.show({
+          title: 'Excellent!',
+          message: 'Outstanding performance! 🎉',
+          color: 'green',
+        });
       } else if (percentage >= 70) {
-        toast.success('Good job! 👍');
+        notifications.show({
+          title: 'Good Job!',
+          message: 'Well done! 👍',
+          color: 'blue',
+        });
       } else {
-        toast('Keep practicing! 💪', { icon: '📚' });
+        notifications.show({
+          title: 'Keep Practicing!',
+          message: 'You\'re improving! 💪',
+          color: 'orange',
+        });
       }
     } catch (error) {
-      toast.error('Failed to grade quiz. Please try again.');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to grade quiz. Please try again.',
+        color: 'red',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -119,14 +159,16 @@ export const QuizInterface: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-student-primary mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
-            Generating your personalized quiz...
-          </p>
-        </div>
-      </div>
+      <Container size="sm">
+        <Center style={{ height: '60vh' }}>
+          <Stack align="center">
+            <Loader size="xl" color="indigo" />
+            <Text size="lg" c="dimmed">
+              Generating your personalized quiz...
+            </Text>
+          </Stack>
+        </Center>
+      </Container>
     );
   }
 
@@ -134,104 +176,119 @@ export const QuizInterface: React.FC = () => {
     const percentage = (quizResult.score / quizResult.totalPoints) * 100;
     
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-2xl mx-auto"
-      >
-        <div className="card text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="mb-6"
-          >
-            {percentage >= 90 ? (
-              <Trophy className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-            ) : percentage >= 70 ? (
-              <Star className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-            ) : (
-              <Target className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-            )}
-          </motion.div>
-
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Quiz Complete!
-          </h2>
-          
-          <div className="text-4xl font-bold mb-4">
-            <span className={cn(
-              percentage >= 90 ? 'text-green-500' :
-              percentage >= 70 ? 'text-blue-500' :
-              percentage >= 50 ? 'text-yellow-500' : 'text-red-500'
-            )}>
-              {percentage.toFixed(0)}%
-            </span>
-          </div>
-
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            You scored {quizResult.score} out of {quizResult.totalPoints} points
-          </p>
-
-          {/* Feedback */}
-          <div className="text-left mb-6 space-y-3">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-              Detailed Feedback:
-            </h3>
-            {quizResult.feedback.map((feedback: string, index: number) => (
+      <Container size="md">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
+          <Paper shadow="sm" p="xl" radius="md" withBorder>
+            <Stack align="center" gap="xl">
               <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
               >
-                {feedback}
+                {percentage >= 90 ? (
+                  <ThemeIcon size={80} color="yellow" variant="light">
+                    <IconTrophy size={40} />
+                  </ThemeIcon>
+                ) : percentage >= 70 ? (
+                  <ThemeIcon size={80} color="blue" variant="light">
+                    <IconStar size={40} />
+                  </ThemeIcon>
+                ) : (
+                  <ThemeIcon size={80} color="gray" variant="light">
+                    <IconTarget size={40} />
+                  </ThemeIcon>
+                )}
               </motion.div>
-            ))}
-          </div>
 
-          {/* Suggestions */}
-          <div className="text-left mb-6">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-              Recommendations:
-            </h3>
-            <div className="space-y-2">
-              {quizResult.suggestions.map((suggestion: string, index: number) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + index * 0.1 }}
-                  className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400"
+              <div style={{ textAlign: 'center' }}>
+                <Title order={2} mb="xs">
+                  {t('quiz.quizComplete')}
+                </Title>
+                
+                <Text size="xl" fw={700} mb="md" c={
+                  percentage >= 90 ? 'green' :
+                  percentage >= 70 ? 'blue' :
+                  percentage >= 50 ? 'orange' : 'red'
+                }>
+                  {percentage.toFixed(0)}%
+                </Text>
+
+                <Text c="dimmed" mb="xl">
+                  You scored {quizResult.score} out of {quizResult.totalPoints} points
+                  {quizResult.xpGained && (
+                    <Badge ml="sm" color="purple" variant="light">
+                      +{quizResult.xpGained} XP
+                    </Badge>
+                  )}
+                </Text>
+              </div>
+
+              {/* Feedback */}
+              <Card w="100%" withBorder>
+                <Title order={4} mb="md">
+                  {t('quiz.detailedFeedback')}
+                </Title>
+                <Stack gap="sm">
+                  {quizResult.feedback.map((feedback: string, index: number) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 + index * 0.1 }}
+                    >
+                      <Paper p="sm" withBorder>
+                        <Text size="sm">{feedback}</Text>
+                      </Paper>
+                    </motion.div>
+                  ))}
+                </Stack>
+              </Card>
+
+              {/* Recommendations */}
+              <Card w="100%" withBorder>
+                <Title order={4} mb="md">
+                  {t('quiz.recommendations')}
+                </Title>
+                <Stack gap="xs">
+                  {quizResult.suggestions.map((suggestion: string, index: number) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + index * 0.1 }}
+                    >
+                      <Group gap="sm">
+                        <IconBolt size={16} color="var(--mantine-color-indigo-6)" />
+                        <Text size="sm">{suggestion}</Text>
+                      </Group>
+                    </motion.div>
+                  ))}
+                </Stack>
+              </Card>
+
+              <Group>
+                <Button
+                  onClick={resetQuiz}
+                  leftSection={<IconRefresh size={16} />}
+                  variant="gradient"
+                  gradient={{ from: 'indigo', to: 'purple' }}
                 >
-                  <Zap className="h-4 w-4 text-student-primary" />
-                  <span>{suggestion}</span>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex space-x-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={resetQuiz}
-              className="flex-1 btn-primary"
-            >
-              Take Another Quiz
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => startQuiz(currentQuiz?.topic || "Newton's Laws", 'intermediate')}
-              className="flex-1 btn-secondary"
-            >
-              Retry This Quiz
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
+                  {t('quiz.takeAnother')}
+                </Button>
+                <Button
+                  onClick={() => startQuiz(currentQuiz?.topic || "Newton's Laws", 'intermediate')}
+                  variant="outline"
+                >
+                  {t('quiz.retryQuiz')}
+                </Button>
+              </Group>
+            </Stack>
+          </Paper>
+        </motion.div>
+      </Container>
     );
   }
 
@@ -240,39 +297,35 @@ export const QuizInterface: React.FC = () => {
     const progress = ((currentQuestionIndex + 1) / currentQuiz.questions.length) * 100;
 
     return (
-      <div className="max-w-2xl mx-auto">
+      <Container size="md">
         {/* Quiz Header */}
-        <div className="card mb-6">
-          <div className="flex items-center justify-between mb-4">
+        <Paper shadow="sm" p="md" radius="md" withBorder mb="md">
+          <Group justify="space-between" mb="md">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                {currentQuiz.title}
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Question {currentQuestionIndex + 1} of {currentQuiz.questions.length}
-              </p>
+              <Title order={3}>{currentQuiz.title}</Title>
+              <Text size="sm" c="dimmed">
+                {t('quiz.question', { 
+                  current: currentQuestionIndex + 1, 
+                  total: currentQuiz.questions.length 
+                })}
+              </Text>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <Clock className="h-4 w-4" />
-                <span className={cn(
-                  timeLeft < 60 ? 'text-red-500 font-bold' : ''
-                )}>
+            <Group gap="md">
+              <Group gap="xs">
+                <IconClock size={16} />
+                <Text
+                  size="sm"
+                  c={timeLeft < 60 ? 'red' : 'dimmed'}
+                  fw={timeLeft < 60 ? 700 : 400}
+                >
                   {formatTime(timeLeft)}
-                </span>
-              </div>
-            </div>
-          </div>
+                </Text>
+              </Group>
+            </Group>
+          </Group>
 
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              className="bg-gradient-to-r from-student-primary to-student-secondary h-2 rounded-full"
-            />
-          </div>
-        </div>
+          <Progress value={progress} color="indigo" size="sm" />
+        </Paper>
 
         {/* Question */}
         <AnimatePresence mode="wait">
@@ -281,151 +334,167 @@ export const QuizInterface: React.FC = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="card"
           >
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                {currentQuestion.question}
-              </h3>
+            <Paper shadow="sm" p="xl" radius="md" withBorder>
+              <Stack gap="xl">
+                <Title order={4} mb="md">
+                  {currentQuestion.question}
+                </Title>
 
-              {currentQuestion.type === 'multiple-choice' && (
-                <div className="space-y-3">
-                  {currentQuestion.options?.map((option, index) => (
-                    <motion.button
-                      key={index}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleAnswerSelect(currentQuestion.id, option)}
-                      className={cn(
-                        "w-full p-4 text-left rounded-lg border-2 transition-all duration-200",
-                        answers[currentQuestion.id] === option
-                          ? "border-student-primary bg-student-primary/10 text-student-primary"
-                          : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-700"
-                      )}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                          answers[currentQuestion.id] === option
-                            ? "border-student-primary bg-student-primary"
-                            : "border-gray-300 dark:border-gray-600"
-                        )}>
-                          {answers[currentQuestion.id] === option && (
-                            <div className="w-2 h-2 bg-white rounded-full" />
-                          )}
-                        </div>
-                        <span className="text-gray-900 dark:text-gray-100">
-                          {option}
-                        </span>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center justify-between">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handlePreviousQuestion}
-                disabled={currentQuestionIndex === 0}
-                className={cn(
-                  "px-6 py-2 rounded-lg transition-all duration-200",
-                  currentQuestionIndex === 0
-                    ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
-                    : "btn-secondary"
+                {currentQuestion.type === 'multiple-choice' && (
+                  <Stack gap="sm">
+                    {currentQuestion.options?.map((option, index) => (
+                      <motion.div
+                        key={index}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Paper
+                          p="md"
+                          withBorder
+                          style={{
+                            cursor: 'pointer',
+                            borderColor: answers[currentQuestion.id] === option 
+                              ? 'var(--mantine-color-indigo-6)' 
+                              : 'var(--mantine-color-gray-3)',
+                            backgroundColor: answers[currentQuestion.id] === option 
+                              ? 'var(--mantine-color-indigo-0)' 
+                              : 'transparent',
+                          }}
+                          onClick={() => handleAnswerSelect(currentQuestion.id, option)}
+                        >
+                          <Group gap="md">
+                            <div
+                              style={{
+                                width: 16,
+                                height: 16,
+                                borderRadius: '50%',
+                                border: `2px solid ${
+                                  answers[currentQuestion.id] === option 
+                                    ? 'var(--mantine-color-indigo-6)' 
+                                    : 'var(--mantine-color-gray-4)'
+                                }`,
+                                backgroundColor: answers[currentQuestion.id] === option 
+                                  ? 'var(--mantine-color-indigo-6)' 
+                                  : 'transparent',
+                              }}
+                            />
+                            <Text>{option}</Text>
+                          </Group>
+                        </Paper>
+                      </motion.div>
+                    ))}
+                  </Stack>
                 )}
-              >
-                Previous
-              </motion.button>
 
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {Object.keys(answers).length} of {currentQuiz.questions.length} answered
-              </span>
+                {/* Navigation */}
+                <Group justify="space-between">
+                  <Button
+                    onClick={handlePreviousQuestion}
+                    disabled={currentQuestionIndex === 0}
+                    variant="outline"
+                  >
+                    {t('common.previous')}
+                  </Button>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleNextQuestion}
-                disabled={!answers[currentQuestion.id]}
-                className={cn(
-                  "px-6 py-2 rounded-lg transition-all duration-200",
-                  !answers[currentQuestion.id]
-                    ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
-                    : currentQuestionIndex === currentQuiz.questions.length - 1
-                    ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-                    : "btn-primary"
-                )}
-              >
-                {currentQuestionIndex === currentQuiz.questions.length - 1 ? 'Submit' : 'Next'}
-              </motion.button>
-            </div>
+                  <Text size="sm" c="dimmed">
+                    {Object.keys(answers).length} of {currentQuiz.questions.length} answered
+                  </Text>
+
+                  <Button
+                    onClick={handleNextQuestion}
+                    disabled={!answers[currentQuestion.id]}
+                    variant={currentQuestionIndex === currentQuiz.questions.length - 1 ? 'gradient' : 'filled'}
+                    gradient={currentQuestionIndex === currentQuiz.questions.length - 1 ? { from: 'green', to: 'teal' } : undefined}
+                  >
+                    {currentQuestionIndex === currentQuiz.questions.length - 1 ? t('common.submit') : t('common.next')}
+                  </Button>
+                </Group>
+              </Stack>
+            </Paper>
           </motion.div>
         </AnimatePresence>
-      </div>
+      </Container>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200 }}
-          className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-student-primary to-student-secondary rounded-full mb-4"
-        >
-          <Target className="h-8 w-8 text-white" />
-        </motion.div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Interactive Quizzes
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Test your knowledge with AI-generated quizzes
-        </p>
-      </div>
-
-      {/* Topic Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {topics.map((topic, index) => (
+    <Container size="lg">
+      <Stack gap="xl">
+        {/* Header */}
+        <div style={{ textAlign: 'center' }}>
           <motion.div
-            key={topic.name}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="card hover:shadow-xl cursor-pointer group"
-            onClick={() => startQuiz(topic.name, topic.difficulty)}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200 }}
           >
-            <div className="text-center">
-              <div className="text-4xl mb-4 group-hover:animate-bounce-gentle">
-                {topic.icon}
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {topic.name}
-              </h3>
-              <span className={cn(
-                "inline-block px-3 py-1 text-xs rounded-full font-medium",
-                topic.difficulty === 'beginner' 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                  : topic.difficulty === 'intermediate'
-                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-              )}>
-                {topic.difficulty}
-              </span>
-              <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="flex items-center justify-center space-x-2 text-sm text-student-primary">
-                  <Brain className="h-4 w-4" />
-                  <span>Start Quiz</span>
-                </div>
-              </div>
-            </div>
+            <ThemeIcon size={80} color="indigo" variant="light" mx="auto" mb="md">
+              <IconTarget size={40} />
+            </ThemeIcon>
           </motion.div>
-        ))}
-      </div>
-    </div>
+          <Title order={2} mb="xs">
+            {t('quiz.title')}
+          </Title>
+          <Text c="dimmed" size="lg">
+            {t('quiz.subtitle')}
+          </Text>
+        </div>
+
+        {/* Topic Selection */}
+        <Grid>
+          {topics.map((topic, index) => (
+            <Grid.Col key={topic.name} span={{ base: 12, sm: 6, lg: 4 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Card
+                  shadow="sm"
+                  padding="xl"
+                  radius="md"
+                  withBorder
+                  style={{ cursor: 'pointer', height: '100%' }}
+                  onClick={() => startQuiz(topic.name, topic.difficulty)}
+                >
+                  <Stack align="center" gap="md">
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      style={{ fontSize: '3rem' }}
+                    >
+                      {topic.icon}
+                    </motion.div>
+                    
+                    <div style={{ textAlign: 'center' }}>
+                      <Title order={4} mb="xs">
+                        {topic.name}
+                      </Title>
+                      <Badge
+                        color={
+                          topic.difficulty === 'beginner' ? 'green' :
+                          topic.difficulty === 'intermediate' ? 'orange' : 'red'
+                        }
+                        variant="light"
+                      >
+                        {t(`quiz.difficulty.${topic.difficulty}`)}
+                      </Badge>
+                    </div>
+
+                    <Group gap="xs" c="indigo" style={{ opacity: 0.8 }}>
+                      <IconBrain size={16} />
+                      <Text size="sm" fw={500}>
+                        {t('quiz.startQuiz')}
+                      </Text>
+                    </Group>
+                  </Stack>
+                </Card>
+              </motion.div>
+            </Grid.Col>
+          ))}
+        </Grid>
+      </Stack>
+    </Container>
   );
 };

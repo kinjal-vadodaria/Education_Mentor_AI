@@ -1,186 +1,188 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  TextInput,
+  PasswordInput,
+  Button,
+  Group,
+  Stack,
+  SegmentedControl,
+  Center,
+  Box,
+  ThemeIcon,
+} from '@mantine/core';
+import { useForm } from '@mantine/form';
 import { motion } from 'framer-motion';
-import { GraduationCap, User, BookOpen, Eye, EyeOff } from 'lucide-react';
+import { IconSchool, IconUser, IconBook } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../utils/cn';
-import toast from 'react-hot-toast';
 
 export const LoginForm: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { t } = useTranslation();
+  const { login, register, isLoading } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [role, setRole] = useState<'student' | 'teacher'>('student');
-  const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+  const form = useForm({
+    initialValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+      name: '',
+    },
+    validate: {
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      confirmPassword: (value, values) =>
+        mode === 'register' && value !== values.password ? 'Passwords do not match' : null,
+      name: (value) => (mode === 'register' && !value ? 'Name is required' : null),
+    },
+  });
 
+  const handleSubmit = async (values: typeof form.values) => {
     try {
-      await login(email, password, role);
-      toast.success(`Welcome back, ${role}!`);
+      if (mode === 'login') {
+        await login(values.email, values.password);
+      } else {
+        await register(values.email, values.password, {
+          name: values.name,
+          role,
+          email: values.email,
+          preferences: {
+            language: 'en',
+            theme: 'light',
+            difficulty: 'intermediate',
+          },
+        });
+      }
     } catch (error) {
-      toast.error('Login failed. Please try again.');
+      // Error handling is done in the auth context
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-900 flex items-center justify-center p-4">
+    <Container size={420} my={40}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
       >
-        {/* Logo and Title */}
-        <div className="text-center mb-8">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mb-4"
-          >
-            <GraduationCap className="h-8 w-8 text-white" />
-          </motion.div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">EduMentor AI</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Your personalized learning companion
-          </p>
-        </div>
+        <Center mb="xl">
+          <ThemeIcon size={60} radius="md" variant="gradient" gradient={{ from: 'indigo', to: 'purple' }}>
+            <IconSchool size={30} />
+          </ThemeIcon>
+        </Center>
 
-        {/* Role Selection */}
-        <div className="mb-6">
-          <div className="grid grid-cols-2 gap-3">
-            <motion.button
-              type="button"
-              onClick={() => setRole('student')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={cn(
-                "flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200",
-                role === 'student'
-                  ? "border-student-primary bg-student-primary/10 text-student-primary"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-              )}
-            >
-              <User className="h-6 w-6 mb-2" />
-              <span className="font-medium">Student</span>
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setRole('teacher')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={cn(
-                "flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200",
-                role === 'teacher'
-                  ? "border-teacher-primary bg-teacher-primary/10 text-teacher-primary"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-              )}
-            >
-              <BookOpen className="h-6 w-6 mb-2" />
-              <span className="font-medium">Teacher</span>
-            </motion.button>
-          </div>
-        </div>
+        <Title ta="center" mb="md">
+          EduMentor AI
+        </Title>
 
-        {/* Login Form */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="card"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
-                placeholder={role === 'student' ? 'student@example.com' : 'teacher@example.com'}
-                required
+        <Text c="dimmed" size="sm" ta="center" mb="xl">
+          {mode === 'login' ? t('auth.welcomeBack') : t('auth.createAccount')}
+        </Text>
+
+        <Paper withBorder shadow="md" p={30} mt={30} radius="md">
+          <Stack>
+            <SegmentedControl
+              value={mode}
+              onChange={(value) => setMode(value as 'login' | 'register')}
+              data={[
+                { label: t('auth.login'), value: 'login' },
+                { label: t('auth.signup'), value: 'register' },
+              ]}
+              fullWidth
+            />
+
+            {mode === 'register' && (
+              <SegmentedControl
+                value={role}
+                onChange={(value) => setRole(value as 'student' | 'teacher')}
+                data={[
+                  {
+                    label: (
+                      <Center>
+                        <IconUser size={16} />
+                        <Box ml={10}>Student</Box>
+                      </Center>
+                    ),
+                    value: 'student',
+                  },
+                  {
+                    label: (
+                      <Center>
+                        <IconBook size={16} />
+                        <Box ml={10}>Teacher</Box>
+                      </Center>
+                    ),
+                    value: 'teacher',
+                  },
+                ]}
+                fullWidth
               />
-            </div>
+            )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-field pr-12"
-                  placeholder="Enter your password"
+            <form onSubmit={form.onSubmit(handleSubmit)}>
+              <Stack>
+                {mode === 'register' && (
+                  <TextInput
+                    label="Name"
+                    placeholder="Your name"
+                    required
+                    {...form.getInputProps('name')}
+                  />
+                )}
+
+                <TextInput
+                  label={t('auth.email')}
+                  placeholder="your@email.com"
                   required
+                  {...form.getInputProps('email')}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
 
-            <motion.button
-              type="submit"
-              disabled={isLoading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={cn(
-                "w-full btn-primary",
-                isLoading && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Signing in...
-                </span>
-              ) : (
-                `Sign in as ${role}`
-              )}
-            </motion.button>
-          </form>
+                <PasswordInput
+                  label={t('auth.password')}
+                  placeholder="Your password"
+                  required
+                  {...form.getInputProps('password')}
+                />
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Demo credentials: any email/password combination
-            </p>
-          </div>
-        </motion.div>
+                {mode === 'register' && (
+                  <PasswordInput
+                    label={t('auth.confirmPassword')}
+                    placeholder="Confirm your password"
+                    required
+                    {...form.getInputProps('confirmPassword')}
+                  />
+                )}
 
-        {/* Features Preview */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 text-center"
-        >
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Experience the future of education
-          </p>
-          <div className="flex justify-center space-x-6 text-xs text-gray-400 dark:text-gray-500">
-            <span>🤖 AI-Powered</span>
-            <span>🌍 Multilingual</span>
-            <span>📊 Analytics</span>
-            <span>🎮 Gamified</span>
-          </div>
-        </motion.div>
+                <Button type="submit" fullWidth loading={isLoading} mt="xl">
+                  {mode === 'login' ? t('auth.login') : t('auth.signup')}
+                </Button>
+              </Stack>
+            </form>
+
+            <Text c="dimmed" size="sm" ta="center" mt="md">
+              {mode === 'login' ? t('auth.dontHaveAccount') : t('auth.alreadyHaveAccount')}{' '}
+              <Text
+                component="button"
+                type="button"
+                c="blue"
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+              >
+                {mode === 'login' ? t('auth.signup') : t('auth.login')}
+              </Text>
+            </Text>
+
+            <Text c="dimmed" size="xs" ta="center" mt="md">
+              Demo: Use any email/password combination
+            </Text>
+          </Stack>
+        </Paper>
       </motion.div>
-    </div>
+    </Container>
   );
 };
