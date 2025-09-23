@@ -2,11 +2,9 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
-  Paper,
   Title,
   Text,
   Group,
-  Stack,
   Card,
   Grid,
   ThemeIcon,
@@ -28,8 +26,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { motion } from 'framer-motion';
 
 export const Analytics: React.FC = () => {
-  const { t } = useTranslation();
-
   // Mock data for charts
   const performanceData = [
     { month: 'Jan', average: 78, physics: 82, math: 75, chemistry: 77 },

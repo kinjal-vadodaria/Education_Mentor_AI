@@ -32,11 +32,22 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getStudentProgress, getQuizResults } from '../../services/supabase';
 
 export const ProgressTracker: React.FC = () => {
-  const { t } = useTranslation();
   const { user } = useAuth();
-  const [progress, setProgress] = useState<any[]>([]);
-  const [quizHistory, setQuizHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState<ProgressData[]>([]);
+  const [quizHistory, setQuizHistory] = useState<QuizResult[]>([]);
+
+  interface QuizResult {
+    quiz_topic: string;
+    score: number;
+    total_questions: number;
+    completed_at: string;
+  }
+
+  interface ProgressData {
+    xp_points: number;
+    current_streak: number;
+    badges?: string[];
+  }
 
   useEffect(() => {
     loadProgressData();
@@ -51,12 +62,10 @@ export const ProgressTracker: React.FC = () => {
         getQuizResults(user.id),
       ]);
 
-      if (progressData.data) setProgress(progressData.data);
+      if (progressData.data) setProgress(progressData.data as ProgressData[]);
       if (quizData.data) setQuizHistory(quizData.data);
     } catch (error) {
       console.error('Error loading progress data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

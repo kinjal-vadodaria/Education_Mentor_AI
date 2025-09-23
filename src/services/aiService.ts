@@ -4,6 +4,11 @@ import { errorReporting } from './errorReporting';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || 'your-google-ai-api-key';
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 // Rate limiting
 class RateLimiter {
   private requests: number[] = [];
@@ -114,7 +119,7 @@ class AIService {
   }
 
   private getFromCache<T>(key: string): T | null {
-    const cached = this.cache.get(key);
+    const cached = this.cache.get(key) as CacheEntry<T> | undefined;
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
     }
@@ -156,7 +161,7 @@ class AIService {
       }
       
       return result;
-    } catch (error) {
+    } catch {
       console.error('AI Service Error:', error);
       errorReporting.reportError(error as Error, { context: 'AI_REQUEST' });
       return fallbackFn();

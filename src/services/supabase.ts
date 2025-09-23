@@ -18,7 +18,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Add global error handler for Supabase
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange((event, _session) => {
   if (event === 'SIGNED_OUT') {
     // Clear any cached data
     localStorage.removeItem('supabase.auth.token');
@@ -70,7 +70,7 @@ export interface ChatMessage {
 }
 
 // Helper function to handle database errors
-const handleDatabaseError = (error: any, operation: string) => {
+const handleDatabaseError = (error: unknown, operation: string) => {
   console.error(`Database error in ${operation}:`, error);
   errorReporting.reportError(error, { context: `DATABASE_${operation.toUpperCase()}` });
   return { data: null, error };
@@ -263,7 +263,7 @@ export const subscribeToUserProgress = (userId: string, callback: (payload: any)
     .subscribe();
 };
 
-export const subscribeToQuizResults = (userId: string, callback: (payload: any) => void) => {
+export const subscribeToQuizResults = (userId: string, callback: (payload: unknown) => void) => {
   return supabase
     .channel('quiz_results')
     .on(
@@ -282,9 +282,9 @@ export const subscribeToQuizResults = (userId: string, callback: (payload: any) 
 // Health check
 export const healthCheck = async () => {
   try {
-    const { data, error } = await supabase.from('users').select('count').limit(1);
+    const { error } = await supabase.from('users').select('count').limit(1);
     return !error;
-  } catch (error) {
+  } catch {
     return false;
   }
 };

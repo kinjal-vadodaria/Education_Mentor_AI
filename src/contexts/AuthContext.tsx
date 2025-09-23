@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await signIn(email, password);
+      const { error } = await signIn(email, password);
       if (error) throw error;
       
       notifications.show({
@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, userData: Partial<User>) => {
     setIsLoading(true);
     try {
-      const { data, error } = await signUp(email, password, userData);
+      const { error } = await signUp(email, password, userData);
       if (error) throw error;
       
       notifications.show({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -11,7 +11,6 @@ import {
   Grid,
   ThemeIcon,
   Badge,
-  Progress,
   Timeline,
 } from '@mantine/core';
 import {
