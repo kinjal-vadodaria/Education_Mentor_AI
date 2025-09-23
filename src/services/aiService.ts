@@ -89,6 +89,11 @@ class AIService {
   private cache = new Map<string, { data: any; timestamp: number }>();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
+  interface CacheEntry<T> {
+    data: T;
+    timestamp: number;
+  }
+
   constructor() {
     if (API_KEY && API_KEY !== 'your-google-ai-api-key') {
       try {
@@ -114,7 +119,7 @@ class AIService {
   }
 
   private getFromCache<T>(key: string): T | null {
-    const cached = this.cache.get(key);
+    const cached = this.cache.get(key) as CacheEntry<T> | undefined;
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
     }
@@ -156,7 +161,7 @@ class AIService {
       }
       
       return result;
-    } catch (error) {
+    } catch {
       console.error('AI Service Error:', error);
       errorReporting.reportError(error as Error, { context: 'AI_REQUEST' });
       return fallbackFn();

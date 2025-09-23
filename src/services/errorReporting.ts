@@ -5,14 +5,14 @@ interface ErrorReport {
   userAgent: string;
   timestamp: string;
   userId?: string;
-  additionalData?: Record<string, any>;
+  additionalData?: Record<string, unknown>;
 }
 
 class ErrorReportingService {
   private isProduction = import.meta.env.MODE === 'production';
   private apiEndpoint = import.meta.env.VITE_ERROR_REPORTING_ENDPOINT;
 
-  async reportError(error: Error, additionalData?: Record<string, any>) {
+  async reportError(error: Error, additionalData?: Record<string, unknown>) {
     const errorReport: ErrorReport = {
       message: error.message,
       stack: error.stack,
@@ -44,7 +44,7 @@ class ErrorReportingService {
     }
   }
 
-  reportUserAction(action: string, data?: Record<string, any>) {
+  reportUserAction(action: string, data?: Record<string, unknown>) {
     if (!this.isProduction) {
       console.log('User Action:', { action, data });
       return;

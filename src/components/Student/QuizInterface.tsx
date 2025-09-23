@@ -27,7 +27,7 @@ import {
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { aiService, Quiz, Question } from '../../services/aiService';
+import { aiService, Quiz } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
 
 export const QuizInterface: React.FC = () => {
@@ -37,9 +37,17 @@ export const QuizInterface: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
-  const [quizResult, setQuizResult] = useState<any>(null);
+  const [quizResult, setQuizResult] = useState<QuizGradingResult | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
+
+  interface QuizGradingResult {
+    score: number;
+    totalPoints: number;
+    feedback: string[];
+    suggestions: string[];
+    xpGained: number;
+  }
 
   const topics = [
     { name: "Newton's Laws", difficulty: 'intermediate', icon: '⚡', color: 'blue' },
@@ -73,7 +81,7 @@ export const QuizInterface: React.FC = () => {
         message: `Quiz started: ${topic}`,
         color: 'green',
       });
-    } catch (error) {
+    } catch {
       notifications.show({
         title: 'Error',
         message: 'Failed to generate quiz. Please try again.',
@@ -131,7 +139,7 @@ export const QuizInterface: React.FC = () => {
           color: 'orange',
         });
       }
-    } catch (error) {
+    } catch {
       notifications.show({
         title: 'Error',
         message: 'Failed to grade quiz. Please try again.',

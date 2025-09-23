@@ -17,7 +17,6 @@ import {
   Select,
   NumberInput,
   Timeline,
-  Loader,
   Center,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
@@ -34,14 +33,13 @@ import {
   IconWand,
   IconCheck,
 } from '@tabler/icons-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { aiService, LessonPlan } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
 
 export const LessonPlanner: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
@@ -82,7 +80,7 @@ export const LessonPlanner: React.FC = () => {
         message: 'Lesson plan generated successfully!',
         color: 'green',
       });
-    } catch (error) {
+    } catch {
       notifications.show({
         title: 'Error',
         message: 'Failed to generate lesson plan. Please try again.',

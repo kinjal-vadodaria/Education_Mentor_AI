@@ -34,8 +34,21 @@ export const StudentDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [progress, setProgress] = useState<any[]>([]);
-  const [recentQuizzes, setRecentQuizzes] = useState<any[]>([]);
+  const [recentQuizzes, setRecentQuizzes] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
+
+  interface QuizResult {
+    quiz_topic: string;
+    score: number;
+    total_questions: number;
+    completed_at: string;
+  }
+
+  interface ProgressData {
+    xp_points: number;
+    current_streak: number;
+    badges?: string[];
+  }
 
   useEffect(() => {
     loadDashboardData();
@@ -50,7 +63,7 @@ export const StudentDashboard: React.FC = () => {
         getQuizResults(user.id),
       ]);
 
-      if (progressData.data) setProgress(progressData.data);
+      if (progressData.data) setProgress(progressData.data as ProgressData[]);
       if (quizData.data) setRecentQuizzes(quizData.data.slice(0, 5));
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -59,11 +72,11 @@ export const StudentDashboard: React.FC = () => {
     }
   };
 
-  const totalXP = progress.reduce((sum, p) => sum + (p.xp_points || 0), 0);
+  const totalXP = (progress as ProgressData[]).reduce((sum, p) => sum + (p.xp_points || 0), 0);
   const currentLevel = Math.floor(totalXP / 100) + 1;
   const xpToNextLevel = 100 - (totalXP % 100);
-  const currentStreak = Math.max(...progress.map(p => p.current_streak || 0), 0);
-  const totalBadges = progress.reduce((sum, p) => sum + (p.badges?.length || 0), 0);
+  const currentStreak = Math.max(...(progress as ProgressData[]).map(p => p.current_streak || 0), 0);
+  const totalBadges = (progress as ProgressData[]).reduce((sum, p) => sum + (p.badges?.length || 0), 0);
 
   const stats = [
     {
