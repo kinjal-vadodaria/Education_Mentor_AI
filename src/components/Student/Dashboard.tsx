@@ -27,12 +27,14 @@ import {
   IconClock,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentProgress, getQuizResults } from '../../services/supabase';
 
 export const StudentDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [progress, setProgress] = useState<any[]>([]);
   const [recentQuizzes, setRecentQuizzes] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,23 @@ export const StudentDashboard: React.FC = () => {
   const xpToNextLevel = 100 - (totalXP % 100);
   const currentStreak = Math.max(...(progress as ProgressData[]).map(p => p.current_streak || 0), 0);
   const totalBadges = (progress as ProgressData[]).reduce((sum, p) => sum + (p.badges?.length || 0), 0);
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'ai-tutor':
+        // This will be handled by the parent component's tab change
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'ai-tutor' }));
+        break;
+      case 'quiz':
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'quizzes' }));
+        break;
+      case 'progress':
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'progress' }));
+        break;
+      default:
+        break;
+    }
+  };
 
   const stats = [
     {
@@ -308,6 +327,7 @@ export const StudentDashboard: React.FC = () => {
                 <Paper
                   p="md"
                   withBorder
+                  onClick={() => handleQuickAction('ai-tutor')}
                   style={{
                     cursor: 'pointer',
                     background: 'linear-gradient(135deg, #667eea20, #764ba220)',
@@ -329,6 +349,7 @@ export const StudentDashboard: React.FC = () => {
                 <Paper
                   p="md"
                   withBorder
+                  onClick={() => handleQuickAction('quiz')}
                   style={{
                     cursor: 'pointer',
                     background: 'linear-gradient(135deg, #10b98120, #059f6920)',
@@ -350,6 +371,7 @@ export const StudentDashboard: React.FC = () => {
                 <Paper
                   p="md"
                   withBorder
+                  onClick={() => handleQuickAction('progress')}
                   style={{
                     cursor: 'pointer',
                     background: 'linear-gradient(135deg, #f59e0b20, #d9770020)',

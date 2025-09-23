@@ -1,57 +1,29 @@
-interface ErrorReport {
-  message: string;
-  stack?: string;
-  url: string;
-  userAgent: string;
-  timestamp: string;
+interface ErrorContext {
+  context?: string;
   userId?: string;
-  additionalData?: Record<string, unknown>;
+  [key: string]: any;
 }
 
 class ErrorReportingService {
-  private isProduction = import.meta.env.MODE === 'production';
-  private apiEndpoint = import.meta.env.VITE_ERROR_REPORTING_ENDPOINT;
-
-  async reportError(error: Error, additionalData?: Record<string, unknown>) {
-    const errorReport: ErrorReport = {
-      message: error.message,
-      stack: error.stack,
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
-      additionalData,
-    };
-
-    // Log to console in development
-    if (!this.isProduction) {
-      console.error('Error Report:', errorReport);
-      return;
+  reportError(error: unknown, context?: ErrorContext): void {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error('Error Report:', errorMessage);
+    if (errorStack) {
+      console.error('Stack:', errorStack);
+    }
+    if (context) {
+      console.error('Context:', context);
     }
 
-    // Send to error reporting service in production
-    if (this.apiEndpoint) {
-      try {
-        await fetch(this.apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(errorReport),
-        });
-      } catch (reportingError) {
-        console.error('Failed to report error:', reportingError);
-      }
-    }
+    // In production, you would send this to a service like Sentry
+    // For now, we'll just log to console
   }
 
-  reportUserAction(action: string, data?: Record<string, unknown>) {
-    if (!this.isProduction) {
-      console.log('User Action:', { action, data });
-      return;
-    }
-
-    // In production, you might want to send this to analytics
-    // Example: analytics.track(action, data);
+  reportUserAction(action: string, data?: Record<string, any>): void {
+    console.log('User Action:', action, data);
+    // In production, you would send this to analytics
   }
 }
 
