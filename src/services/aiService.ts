@@ -11,7 +11,8 @@ if (!API_KEY) {
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 // Rate limiting
-const requestCache = new Map<string, { response: any; timestamp: number }>();
+type CachedResponse = Quiz | LessonPlan | { content: string };
+const requestCache = new Map<string, { response: CachedResponse; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const RATE_LIMIT = 10; // requests per minute
 const rateLimitTracker = new Map<string, number[]>();
@@ -55,6 +56,29 @@ export interface LessonActivity {
   type: 'presentation' | 'hands-on' | 'discussion' | 'assessment';
 }
 
+interface QuizData {
+  title: string;
+  questions: {
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+  }[];
+}
+
+interface LessonPlanData {
+  title: string;
+  objectives: string[];
+  materials: string[];
+  activities: {
+    name: string;
+    description: string;
+    duration: number;
+    type: string;
+  }[];
+  assessment: string;
+}
+
 class AIService {
   private checkRateLimit(userId?: string): boolean {
     const key = userId || 'anonymous';
@@ -73,7 +97,7 @@ class AIService {
     return true;
   }
 
-  private getCachedResponse(cacheKey: string): any | null {
+  private getCachedResponse(cacheKey: string): Quiz | LessonPlan | { content: string } | null {
     const cached = requestCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       return cached.response;
@@ -81,7 +105,7 @@ class AIService {
     return null;
   }
 
-  private setCachedResponse(cacheKey: string, response: any): void {
+  private setCachedResponse(cacheKey: string, response: Quiz | LessonPlan | { content: string }): void {
     requestCache.set(cacheKey, { response, timestamp: Date.now() });
   }
 
@@ -95,7 +119,7 @@ class AIService {
   ): Promise<{ content: string }> {
     const cacheKey = `explanation:${topic}:${difficulty}:${language}:${gradeLevel}`;
     const cached = this.getCachedResponse(cacheKey);
-    if (cached) return cached;
+    if (cached && 'content' in cached) return cached as { content: string };
 
     if (!this.checkRateLimit(userId)) {
       throw new Error('Rate limit exceeded. Please try again later.');
@@ -151,7 +175,7 @@ class AIService {
   ): Promise<Quiz> {
     const cacheKey = `quiz:${topic}:${difficulty}:${questionCount}`;
     const cached = this.getCachedResponse(cacheKey);
-    if (cached) return cached;
+    if (cached && 'topic' in cached && 'questions' in cached) return cached as Quiz;
 
     if (!this.checkRateLimit(userId)) {
       throw new Error('Rate limit exceeded. Please try again later.');
@@ -188,14 +212,14 @@ class AIService {
         throw new Error('Invalid response format');
       }
 
-      const quizData = JSON.parse(jsonMatch[0]);
-      
+      const quizData: QuizData = JSON.parse(jsonMatch[0]);
+
       const quiz: Quiz = {
         id: Date.now().toString(),
         title: quizData.title || `${topic} Quiz`,
         topic,
         difficulty,
-        questions: quizData.questions.map((q: any, index: number) => ({
+        questions: quizData.questions.map((q, index: number) => ({
           id: `q${index + 1}`,
           question: q.question,
           type: 'multiple-choice' as const,
@@ -282,7 +306,7 @@ class AIService {
   ): Promise<LessonPlan> {
     const cacheKey = `lesson:${topic}:${grade}:${duration}:${subject}`;
     const cached = this.getCachedResponse(cacheKey);
-    if (cached) return cached;
+    if (cached && 'subject' in cached && 'objectives' in cached) return cached as LessonPlan;
 
     if (!this.checkRateLimit()) {
       throw new Error('Rate limit exceeded. Please try again later.');
@@ -330,8 +354,8 @@ class AIService {
         throw new Error('Invalid response format');
       }
 
-      const planData = JSON.parse(jsonMatch[0]);
-      
+      const planData: LessonPlanData = JSON.parse(jsonMatch[0]);
+
       const lessonPlan: LessonPlan = {
         id: Date.now().toString(),
         title: planData.title || `${topic} - Grade ${grade}`,
@@ -340,12 +364,12 @@ class AIService {
         duration,
         objectives: planData.objectives || [],
         materials: planData.materials || [],
-        activities: planData.activities.map((activity: any, index: number) => ({
+        activities: planData.activities.map((activity, index: number) => ({
           id: `activity${index + 1}`,
           name: activity.name,
           description: activity.description,
           duration: activity.duration,
-          type: activity.type || 'presentation',
+          type: (activity.type || 'presentation') as 'presentation' | 'hands-on' | 'discussion' | 'assessment',
         })),
         assessment: planData.assessment || 'Formative assessment through observation and questioning',
         createdAt: new Date(),

@@ -70,10 +70,11 @@ export const LoginForm: React.FC = () => {
           color: 'green',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Something went wrong';
       notifications.show({
         title: 'Error',
-        message: error.message || 'Something went wrong',
+        message: message,
         color: 'red',
       });
     } finally {

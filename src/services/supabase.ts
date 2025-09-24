@@ -92,10 +92,30 @@ export const createUserProfile = async (userId: string, profileData: {
   return data;
 };
 
+interface UserPreferences {
+  theme?: 'light' | 'dark' | 'auto';
+  language?: string;
+  notifications?: {
+    email?: boolean;
+    push?: boolean;
+    quizReminders?: boolean;
+    lessonReminders?: boolean;
+  };
+  accessibility?: {
+    fontSize?: 'small' | 'medium' | 'large';
+    highContrast?: boolean;
+    reducedMotion?: boolean;
+  };
+  dashboard?: {
+    defaultView?: 'overview' | 'recent' | 'favorites';
+    itemsPerPage?: number;
+  };
+}
+
 export const updateUserProfile = async (userId: string, updates: Partial<{
   name: string;
   grade_level: number;
-  preferences: Record<string, any>;
+  preferences: UserPreferences;
 }>) => {
   const { data, error } = await supabase
     .from('users')
