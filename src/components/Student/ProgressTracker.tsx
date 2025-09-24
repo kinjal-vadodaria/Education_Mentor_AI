@@ -29,6 +29,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentProgress, getQuizResults } from '../../services/supabase';
+import { errorReporting } from '../../services/errorReporting';
 
 export const ProgressTracker: React.FC = () => {
   const { user } = useAuth();
@@ -47,10 +48,6 @@ export const ProgressTracker: React.FC = () => {
     current_streak: number;
     badges?: string[];
   }
-
-  useEffect(() => {
-    loadProgressData();
-  }, [user, loadProgressData]);
 
   const loadProgressData = useCallback(async () => {
     if (!user) return;
@@ -72,6 +69,10 @@ export const ProgressTracker: React.FC = () => {
       errorReporting.reportError(error, { context: 'LOAD_PROGRESS_DATA' });
     }
   }, [user]);
+
+  useEffect(() => {
+    loadProgressData();
+  }, [user, loadProgressData]);
 
   // Calculate stats
   const totalXP = progressData.reduce((sum, p) => sum + (p.xp_points || 0), 0);

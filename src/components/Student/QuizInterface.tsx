@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { aiService, Quiz } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
+import { errorReporting } from '../../services/errorReporting';
 
 export const QuizInterface: React.FC = () => {
   const { t } = useTranslation();
@@ -57,6 +58,26 @@ export const QuizInterface: React.FC = () => {
     { name: 'Chemistry Bonds', difficulty: 'advanced', icon: '🧪', color: 'red' },
     { name: 'Literature Analysis', difficulty: 'intermediate', icon: '📚', color: 'teal' },
   ];
+
+  const handleSubmitQuiz = useCallback(async () => {
+    if (!currentQuiz) return;
+
+    setIsLoading(true);
+    try {
+      const result = await aiService.gradeQuiz(currentQuiz, answers, user?.id);
+      setQuizResult(result);
+      setShowResults(true);
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'GRADE_QUIZ' });
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to grade quiz. Please try again.',
+        color: 'red',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentQuiz, answers, user, setQuizResult, setShowResults, setIsLoading]);
 
   useEffect(() => {
     if (currentQuiz && timeLeft > 0) {
@@ -109,26 +130,6 @@ export const QuizInterface: React.FC = () => {
       setCurrentQuestionIndex(prev => prev - 1);
     }
   };
-
-  const handleSubmitQuiz = useCallback(async () => {
-    if (!currentQuiz) return;
-
-    setIsLoading(true);
-    try {
-      const result = await aiService.gradeQuiz(currentQuiz, answers, user?.id);
-      setQuizResult(result);
-      setShowResults(true);
-    } catch (error) {
-      errorReporting.reportError(error, { context: 'GRADE_QUIZ' });
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to grade quiz. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentQuiz, answers, user, setQuizResult, setShowResults, setIsLoading]);
 
   const resetQuiz = () => {
     setCurrentQuiz(null);

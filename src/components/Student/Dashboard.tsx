@@ -25,13 +25,14 @@ import {
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentProgress, getQuizResults } from '../../services/supabase';
+import { errorReporting } from '../../services/errorReporting';
 
 export const StudentDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [progress, setProgress] = useState<ProgressData[]>([]);
   const [recentQuizzes, setRecentQuizzes] = useState<QuizResult[]>([]);
-  const [setLoading] = useState(true);
+  const [isLoading, setLoading] = useState(true);
 
   interface QuizResult {
     quiz_topic: string;
@@ -45,10 +46,6 @@ export const StudentDashboard: React.FC = () => {
     current_streak: number;
     badges?: string[];
   }
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
 
   const loadDashboardData = useCallback(async () => {
     if (!user) return;
@@ -71,6 +68,10 @@ export const StudentDashboard: React.FC = () => {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const totalXP = (progress as ProgressData[]).reduce((sum, p) => sum + (p.xp_points || 0), 0);
   const currentLevel = Math.floor(totalXP / 100) + 1;
