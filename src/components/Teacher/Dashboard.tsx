@@ -30,6 +30,22 @@ export const TeacherDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
 
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'lesson-planner':
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'lesson-planner' }));
+        break;
+      case 'analytics':
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'analytics' }));
+        break;
+      case 'students':
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'students' }));
+        break;
+      default:
+        break;
+    }
+  };
+
   const stats = [
     {
       title: t('teacher.totalStudents'),
@@ -320,6 +336,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Paper
                   p="md"
                   withBorder
+                  onClick={() => handleQuickAction('lesson-planner')}
                   style={{
                     cursor: 'pointer',
                     background: 'linear-gradient(135deg, #3b82f620, #1d4ed820)',
@@ -362,6 +379,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Paper
                   p="md"
                   withBorder
+                  onClick={() => handleQuickAction('analytics')}
                   style={{
                     cursor: 'pointer',
                     background: 'linear-gradient(135deg, #8b5cf620, #7c3aed20)',
@@ -383,6 +401,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Paper
                   p="md"
                   withBorder
+                  onClick={() => handleQuickAction('students')}
                   style={{
                     cursor: 'pointer',
                     background: 'linear-gradient(135deg, #f59e0b20, #d9770020)',

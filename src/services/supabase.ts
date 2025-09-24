@@ -1,290 +1,230 @@
 import { createClient } from '@supabase/supabase-js';
 import { errorReporting } from './errorReporting';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
-});
-
-// Add global error handler for Supabase
-supabase.auth.onAuthStateChange((event, _session) => {
-  if (event === 'SIGNED_OUT') {
-    // Clear any cached data
-    localStorage.removeItem('supabase.auth.token');
-  }
-});
-
-// Database types
-export interface User {
-  id: string;
-  email: string;
-  role: 'student' | 'teacher';
-  name: string;
-  grade_level?: number;
-  created_at: string;
-  preferences: {
-    language: string;
-    theme: 'light' | 'dark';
-    difficulty: 'beginner' | 'intermediate' | 'advanced';
-  };
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
-export interface StudentProgress {
-  id: string;
-  user_id: string;
-  subject: string;
-  xp_points: number;
-  current_streak: number;
-  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  badges: string[];
-}
-
-export interface QuizResult {
-  id: string;
-  user_id: string;
-  quiz_topic: string;
-  score: number;
-  total_questions: number;
-  completed_at: string;
-  time_taken: number;
-}
-
-export interface ChatMessage {
-  id: string;
-  user_id: string;
-  message: string;
-  response: string;
-  timestamp: string;
-  session_id: string;
-}
-
-// Helper function to handle database errors
-const handleDatabaseError = (error: unknown, operation: string) => {
-  console.error(`Database error in ${operation}:`, error);
-  errorReporting.reportError(error, { context: `DATABASE_${operation.toUpperCase()}` });
-  return { data: null, error };
-};
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Auth functions
-export const signUp = async (email: string, password: string, userData: Partial<User>) => {
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData,
-      },
-    });
-    
-    if (error) throw error;
-    
-    // Create user profile
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email: data.user.email!,
-          ...userData,
-        });
-      
-      if (profileError) {
-        console.error('Failed to create user profile:', profileError);
-      }
-    }
-    
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'signUp');
+export const signIn = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'SIGN_IN' });
+    throw error;
   }
+
+  return data;
 };
 
-export const signIn = async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'signIn');
+export const signUp = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'SIGN_UP' });
+    throw error;
   }
+
+  return data;
 };
 
 export const signOut = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-    return { error };
-  } catch (error) {
-    return handleDatabaseError(error, 'signOut');
+  const { error } = await supabase.auth.signOut();
+  
+  if (error) {
+    errorReporting.reportError(error, { context: 'SIGN_OUT' });
+    throw error;
   }
 };
 
-// Database functions
-export const getUserProfile = async (userId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'getUserProfile');
+export const getCurrentUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return null;
+
+  const { data: profile, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_CURRENT_USER' });
+    throw error;
   }
+
+  return profile;
 };
 
-export const updateUserProfile = async (userId: string, updates: Partial<User>) => {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', userId)
-      .select()
-      .single();
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'updateUserProfile');
+export const createUserProfile = async (userId: string, profileData: {
+  email: string;
+  name: string;
+  role: 'student' | 'teacher';
+  grade_level?: number;
+}) => {
+  const { data, error } = await supabase
+    .from('users')
+    .insert([
+      {
+        id: userId,
+        ...profileData,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'CREATE_USER_PROFILE' });
+    throw error;
   }
+
+  return data;
 };
 
+export const updateUserProfile = async (userId: string, updates: Partial<{
+  name: string;
+  grade_level: number;
+  preferences: Record<string, any>;
+}>) => {
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'UPDATE_USER_PROFILE' });
+    throw error;
+  }
+
+  return data;
+};
+
+// Student progress functions
 export const getStudentProgress = async (userId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('student_progress')
-      .select('*')
-      .eq('user_id', userId);
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'getStudentProgress');
+  const { data, error } = await supabase
+    .from('student_progress')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_STUDENT_PROGRESS' });
   }
+
+  return { data, error };
 };
 
-export const updateStudentProgress = async (userId: string, subject: string, updates: Partial<StudentProgress>) => {
-  try {
-    const { data, error } = await supabase
-      .from('student_progress')
-      .upsert({
+export const updateStudentProgress = async (userId: string, subject: string, updates: {
+  xp_points?: number;
+  current_streak?: number;
+  level?: string;
+  badges?: string[];
+}) => {
+  const { data, error } = await supabase
+    .from('student_progress')
+    .upsert([
+      {
         user_id: userId,
         subject,
         ...updates,
-      })
-      .select()
-      .single();
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'updateStudentProgress');
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'UPDATE_STUDENT_PROGRESS' });
   }
+
+  return { data, error };
 };
 
-export const saveQuizResult = async (result: Omit<QuizResult, 'id'>) => {
-  try {
-    const { data, error } = await supabase
-      .from('quiz_results')
-      .insert(result)
-      .select()
-      .single();
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'saveQuizResult');
+// Quiz functions
+export const saveQuizResult = async (userId: string, quizData: {
+  quiz_topic: string;
+  score: number;
+  total_questions: number;
+  time_taken?: number;
+}) => {
+  const { data, error } = await supabase
+    .from('quiz_results')
+    .insert([
+      {
+        user_id: userId,
+        ...quizData,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'SAVE_QUIZ_RESULT' });
   }
+
+  return { data, error };
 };
 
 export const getQuizResults = async (userId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('quiz_results')
-      .select('*')
-      .eq('user_id', userId)
-      .order('completed_at', { ascending: false });
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'getQuizResults');
+  const { data, error } = await supabase
+    .from('quiz_results')
+    .select('*')
+    .eq('user_id', userId)
+    .order('completed_at', { ascending: false });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_QUIZ_RESULTS' });
   }
+
+  return { data, error };
 };
 
-export const saveChatMessage = async (message: Omit<ChatMessage, 'id'>) => {
-  try {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert(message)
-      .select()
-      .single();
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'saveChatMessage');
-  }
-};
-
-export const getChatHistory = async (userId: string, sessionId?: string) => {
-  try {
-    let query = supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('user_id', userId)
-      .order('timestamp', { ascending: true });
-
-    if (sessionId) {
-      query = query.eq('session_id', sessionId);
-    }
-
-    const { data, error } = await query;
-    return { data, error };
-  } catch (error) {
-    return handleDatabaseError(error, 'getChatHistory');
-  }
-};
-
-// Real-time subscriptions
-export const subscribeToUserProgress = (userId: string, callback: (payload: any) => void) => {
-  return supabase
-    .channel('student_progress')
-    .on(
-      'postgres_changes',
+// Chat functions
+export const saveChatMessage = async (userId: string, messageData: {
+  message: string;
+  response: string;
+  session_id: string;
+}) => {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert([
       {
-        event: '*',
-        schema: 'public',
-        table: 'student_progress',
-        filter: `user_id=eq.${userId}`,
+        user_id: userId,
+        ...messageData,
       },
-      callback
-    )
-    .subscribe();
-};
+    ])
+    .select()
+    .single();
 
-export const subscribeToQuizResults = (userId: string, callback: (payload: unknown) => void) => {
-  return supabase
-    .channel('quiz_results')
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'quiz_results',
-        filter: `user_id=eq.${userId}`,
-      },
-      callback
-    )
-    .subscribe();
-};
-
-// Health check
-export const healthCheck = async () => {
-  try {
-    const { error } = await supabase.from('users').select('count').limit(1);
-    return !error;
-  } catch {
-    return false;
+  if (error) {
+    errorReporting.reportError(error, { context: 'SAVE_CHAT_MESSAGE' });
   }
+
+  return { data, error };
+};
+
+export const getChatHistory = async (userId: string, sessionId: string) => {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('session_id', sessionId)
+    .order('timestamp', { ascending: true });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_CHAT_HISTORY' });
+  }
+
+  return { data, error };
 };

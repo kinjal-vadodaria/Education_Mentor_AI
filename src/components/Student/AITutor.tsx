@@ -3,30 +3,30 @@ import { useTranslation } from 'react-i18next';
 import {
   Container,
   Paper,
+  Title,
+  Text,
   TextInput,
   Button,
-  Stack,
   Group,
-  Text,
-  ActionIcon,
-  Select,
-  Badge,
-  ScrollArea,
-  ThemeIcon,
-  Loader,
+  Stack,
   Card,
+  Grid,
+  ThemeIcon,
+  ActionIcon,
+  ScrollArea,
+  Badge,
+  Center,
+  Loader,
 } from '@mantine/core';
 import {
+  IconBrain,
   IconSend,
   IconMicrophone,
-  IconMicrophoneOff,
   IconVolume,
-  IconVolumeOff,
-  IconBrain,
-  IconBulb,
   IconTarget,
-  IconWorld,
   IconBolt,
+  IconBook,
+  IconMath,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,351 +38,390 @@ interface ChatMessage {
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  type: 'text' | 'quiz' | 'explanation';
+  type?: 'text' | 'explanation' | 'quiz';
 }
 
 export const AITutor: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      content: "Hi! I'm your AI tutor. I can explain any topic, create quizzes, and adapt to your learning style. What would you like to learn today?",
-      sender: 'ai',
-      timestamp: new Date(),
-      type: 'text',
-    },
-  ]);
-  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [difficulty, setDifficulty] = useState('intermediate');
-  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionId] = useState(() => Date.now().toString());
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const languages = [
-    { value: 'en', label: '🇺🇸 English' },
-    { value: 'es', label: '🇪🇸 Español' },
-    { value: 'hi', label: '🇮🇳 हिंदी' },
-    { value: 'zh', label: '🇨🇳 中文' },
-    { value: 'ar', label: '🇸🇦 العربية' },
-    { value: 'fr', label: '🇫🇷 Français' },
-  ];
-
-  const quickPrompts = [
-    t('aiTutor.explainNewton'),
-    t('aiTutor.createQuiz'),
-    t('aiTutor.helpCalculus'),
-    t('aiTutor.explainQuantum'),
-  ];
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const viewport = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSend = async (message?: string) => {
-    const messageText = message || input.trim();
-    if (!messageText || isLoading) return;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    // Welcome message
+    const welcomeMessage: ChatMessage = {
+      id: 'welcome',
+      content: `Hello ${user?.name}! I'm your AI tutor. I'm here to help you learn and understand any topic. What would you like to explore today?`,
+      sender: 'ai',
+      timestamp: new Date(),
+      type: 'text',
+    };
+    setMessages([welcomeMessage]);
+  }, [user?.name]);
+
+  const quickPrompts = [
+    {
+      text: t('aiTutor.explainNewton'),
+      icon: IconBolt,
+      color: 'blue',
+    },
+    {
+      text: t('aiTutor.createQuiz'),
+      icon: IconTarget,
+      color: 'green',
+    },
+    {
+      text: t('aiTutor.helpCalculus'),
+      icon: IconMath,
+      color: 'purple',
+    },
+    {
+      text: t('aiTutor.explainQuantum'),
+      icon: IconBook,
+      color: 'orange',
+    },
+  ];
+
+  const handleSendMessage = async (messageText?: string) => {
+    const text = messageText || inputValue.trim();
+    if (!text) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: messageText,
+      content: text,
       sender: 'user',
       timestamp: new Date(),
       type: 'text',
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setInputValue('');
     setIsLoading(true);
 
     try {
-      const isQuizRequest = messageText.toLowerCase().includes('quiz') || 
-                           messageText.toLowerCase().includes('test') ||
-                           messageText.toLowerCase().includes('questions');
-
-      if (isQuizRequest) {
-        const quiz = await aiService.generateQuiz(messageText, difficulty, 5, user?.id);
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: `I've created a quiz for you on "${messageText}". Ready to test your knowledge?`,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'quiz',
-        };
-        setMessages(prev => [...prev, aiMessage]);
+      // Check if user is asking for a quiz
+      if (text.toLowerCase().includes('quiz') || text.toLowerCase().includes('test')) {
+        try {
+          const quiz = await aiService.generateQuiz(text, user?.preferences?.difficulty || 'intermediate', 5, user?.id);
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: `I've created a quiz for you on "${text}". Here are the questions:\n\n${quiz.questions.map((q, i) => `${i + 1}. ${q.question}\n${q.options?.map((opt, j) => `   ${String.fromCharCode(65 + j)}. ${opt}`).join('\n') || ''}`).join('\n\n')}\n\nWould you like to take this quiz in the Quiz section?`,
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'quiz',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        } catch (error) {
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: `I'd be happy to create a quiz for you on "${text}"! However, I'm having trouble generating it right now. You can try the Quiz section for pre-made quizzes on various topics.`,
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'text',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        }
       } else {
-        const response = await aiService.generateExplanation(
-          messageText,
-          difficulty,
-          i18n.language,
-          user?.grade_level,
-          user?.id,
-          sessionId
-        );
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: response.content,
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'explanation',
-        };
-        setMessages(prev => [...prev, aiMessage]);
+        // Regular explanation request
+        try {
+          const response = await aiService.generateExplanation(
+            text,
+            user?.preferences?.difficulty || 'intermediate',
+            i18n.language,
+            user?.grade_level,
+            user?.id,
+            sessionId
+          );
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: response.content,
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'explanation',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        } catch (error) {
+          // Provide a helpful fallback response
+          const aiMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: getFallbackResponse(text, user?.preferences?.difficulty || 'intermediate'),
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'explanation',
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       notifications.show({
         title: 'Error',
-        message: 'Sorry, I encountered an error. Please try again.',
+        message: error.message || 'Failed to get response from AI tutor',
         color: 'red',
       });
+      
+      // Add fallback message
+      const fallbackMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm sorry, I'm having trouble connecting right now. Let me try to help you with what I know! Could you please rephrase your question or try asking about a specific topic like physics, math, or science?",
+        sender: 'ai',
+        timestamp: new Date(),
+        type: 'text',
+      };
+      setMessages(prev => [...prev, fallbackMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVoiceInput = () => {
-    if (!isListening) {
-      setIsListening(true);
-      // Simulate voice input for demo
-      setTimeout(() => {
-        setInput("Explain Newton's Laws");
-        setIsListening(false);
-        notifications.show({
-          title: 'Voice Input',
-          message: 'Voice input captured!',
-          color: 'green',
-        });
-      }, 2000);
-    } else {
-      setIsListening(false);
+  const getFallbackResponse = (topic: string, difficulty: string): string => {
+    const responses: Record<string, Record<string, string>> = {
+      "newton": {
+        beginner: "Newton's Laws are like rules for how things move! The first law says things at rest stay at rest, and things moving keep moving unless something stops them. The second law says the harder you push something, the faster it goes. The third law says for every action, there's an equal and opposite reaction - like when you walk, you push back on the ground and it pushes you forward!",
+        intermediate: "Newton's Three Laws of Motion describe the relationship between forces and motion. The First Law (Inertia) states that objects remain at rest or in uniform motion unless acted upon by an external force. The Second Law relates force, mass, and acceleration (F=ma). The Third Law states that for every action, there is an equal and opposite reaction.",
+        advanced: "Newton's laws form the foundation of classical mechanics. The First Law defines inertial reference frames and the concept of inertia. The Second Law, F=ma, is actually F=dp/dt in its most general form. The Third Law reflects the conservation of momentum and is fundamental to understanding interactions between objects."
+      },
+      "photosynthesis": {
+        beginner: "Photosynthesis is how plants make their own food! They use sunlight, water, and carbon dioxide from the air to create sugar and oxygen. It's like plants are cooking their own meals using sunlight as their energy source!",
+        intermediate: "Photosynthesis is the process by which plants convert light energy into chemical energy. The equation is: 6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂. This occurs in chloroplasts and involves light-dependent and light-independent reactions.",
+        advanced: "Photosynthesis involves complex biochemical pathways including the light reactions in thylakoids (photosystems I and II, electron transport chain) and the Calvin cycle in the stroma. The process converts light energy to ATP and NADPH, which drive carbon fixation."
+      }
+    };
+
+    const topicKey = Object.keys(responses).find(key => 
+      topic.toLowerCase().includes(key)
+    );
+
+    if (topicKey && responses[topicKey][difficulty]) {
+      return responses[topicKey][difficulty];
     }
+
+    return `I'd be happy to help you learn about ${topic}! This is a fascinating topic. While I'm having trouble accessing my full knowledge base right now, I can tell you that understanding ${topic} is important for building a strong foundation in your studies. Would you like me to suggest some specific questions about ${topic} that I might be able to help with?`;
   };
 
-  const handleTextToSpeech = (text: string) => {
-    if (isSpeaking) {
-      setIsSpeaking(false);
-      return;
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSendMessage();
     }
-
-    setIsSpeaking(true);
-    // Simulate text-to-speech for demo
-    setTimeout(() => {
-      setIsSpeaking(false);
-      notifications.show({
-        title: 'Speech',
-        message: 'Speech completed!',
-        color: 'blue',
-      });
-    }, 3000);
   };
 
   return (
     <Container size="lg">
-      <Paper shadow="sm" radius="md" withBorder style={{ height: 'calc(100vh - 120px)' }}>
+      <Stack gap="xl">
         {/* Header */}
-        <Group justify="space-between" p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
-          <Group>
-            <ThemeIcon size="lg" color="indigo" variant="light">
-              <IconBrain size={20} />
+        <div style={{ textAlign: 'center' }}>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200 }}
+          >
+            <ThemeIcon size={80} color="indigo" variant="light" mx="auto" mb="md">
+              <IconBrain size={40} />
             </ThemeIcon>
-            <div>
-              <Text fw={600} size="lg">
-                {t('aiTutor.title')}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t('aiTutor.subtitle')}
-              </Text>
-            </div>
-          </Group>
-
-          <Group>
-            <Select
-              data={languages}
-              value={i18n.language}
-              onChange={(value) => value && i18n.changeLanguage(value)}
-              leftSection={<IconWorld size={16} />}
-              w={140}
-              size="xs"
-            />
-            <Select
-              data={[
-                { value: 'beginner', label: t('quiz.difficulty.beginner') },
-                { value: 'intermediate', label: t('quiz.difficulty.intermediate') },
-                { value: 'advanced', label: t('quiz.difficulty.advanced') },
-              ]}
-              value={difficulty}
-              onChange={(value) => value && setDifficulty(value)}
-              w={120}
-              size="xs"
-            />
-          </Group>
-        </Group>
-
-        {/* Messages */}
-        <ScrollArea style={{ height: 'calc(100% - 140px)' }} p="md">
-          <Stack gap="md">
-            <AnimatePresence>
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  style={{
-                    display: 'flex',
-                    justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
-                  }}
-                >
-                  <Card
-                    shadow="sm"
-                    padding="md"
-                    radius="md"
-                    style={{
-                      maxWidth: '80%',
-                      backgroundColor: message.sender === 'user' 
-                        ? 'var(--mantine-color-indigo-6)' 
-                        : 'var(--mantine-color-gray-1)',
-                      color: message.sender === 'user' ? 'white' : 'inherit',
-                    }}
-                  >
-                    {message.sender === 'ai' && (
-                      <Group gap="xs" mb="xs">
-                        <IconBrain size={16} color="var(--mantine-color-indigo-6)" />
-                        <Text size="xs" fw={500} c="indigo">
-                          AI Tutor
-                        </Text>
-                        {message.type === 'quiz' && (
-                          <Badge size="xs" color="green">
-                            <IconTarget size={12} />
-                          </Badge>
-                        )}
-                        {message.type === 'explanation' && (
-                          <Badge size="xs" color="yellow">
-                            <IconBulb size={12} />
-                          </Badge>
-                        )}
-                      </Group>
-                    )}
-                    
-                    <Text size="sm" style={{ lineHeight: 1.5 }}>
-                      {message.content}
-                    </Text>
-
-                    {message.sender === 'ai' && (
-                      <Group justify="space-between" mt="sm" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
-                        <Group gap="xs">
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            onClick={() => handleTextToSpeech(message.content)}
-                          >
-                            {isSpeaking ? <IconVolumeOff size={14} /> : <IconVolume size={14} />}
-                          </ActionIcon>
-                          
-                          {message.type === 'explanation' && (
-                            <Button
-                              size="xs"
-                              variant="light"
-                              color="green"
-                              onClick={() => handleSend(`Create a quiz on ${message.content.slice(0, 50)}`)}
-                            >
-                              {t('aiTutor.createQuizButton')}
-                            </Button>
-                          )}
-                        </Group>
-                        
-                        <Text size="xs" c="dimmed">
-                          {message.timestamp.toLocaleTimeString()}
-                        </Text>
-                      </Group>
-                    )}
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                style={{ display: 'flex', justifyContent: 'flex-start' }}
-              >
-                <Card shadow="sm" padding="md" radius="md" style={{ backgroundColor: 'var(--mantine-color-gray-1)' }}>
-                  <Group gap="xs">
-                    <Loader size="sm" color="indigo" />
-                    <Text size="sm" c="dimmed">
-                      {t('aiTutor.thinking')}
-                    </Text>
-                  </Group>
-                </Card>
-              </motion.div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </Stack>
-        </ScrollArea>
+          </motion.div>
+          <Title order={2} mb="xs">
+            {t('aiTutor.title')}
+          </Title>
+          <Text c="dimmed" size="lg">
+            {t('aiTutor.subtitle')}
+          </Text>
+        </div>
 
         {/* Quick Prompts */}
-        {messages.length === 1 && (
+        {messages.length <= 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            style={{ padding: '0 1rem' }}
+            transition={{ delay: 0.3 }}
           >
-            <Text size="sm" c="dimmed" mb="xs">
-              Try these quick prompts:
+            <Text fw={500} mb="md" ta="center">
+              {t('aiTutor.quickPrompts')}
             </Text>
-            <Group gap="xs">
-              {quickPrompts.map((prompt, index) => (
-                <Button
-                  key={index}
-                  size="xs"
-                  variant="light"
-                  leftSection={<IconBolt size={12} />}
-                  onClick={() => handleSend(prompt)}
-                >
-                  {prompt}
-                </Button>
-              ))}
-            </Group>
+            <Grid>
+              {quickPrompts.map((prompt, index) => {
+                const Icon = prompt.icon;
+                return (
+                  <Grid.Col key={index} span={{ base: 12, sm: 6 }}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Card
+                        shadow="sm"
+                        padding="md"
+                        radius="md"
+                        withBorder
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleSendMessage(prompt.text)}
+                      >
+                        <Group gap="sm">
+                          <ThemeIcon color={prompt.color} variant="light">
+                            <Icon size={16} />
+                          </ThemeIcon>
+                          <Text size="sm" style={{ flex: 1 }}>
+                            {prompt.text}
+                          </Text>
+                        </Group>
+                      </Card>
+                    </motion.div>
+                  </Grid.Col>
+                );
+              })}
+            </Grid>
           </motion.div>
         )}
 
-        {/* Input */}
-        <Group p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
-          <TextInput
-            flex={1}
-            placeholder={t('aiTutor.askAnything')}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            disabled={isLoading}
-            rightSection={
-              <ActionIcon
-                onClick={handleVoiceInput}
-                color={isListening ? 'red' : 'gray'}
-                variant={isListening ? 'filled' : 'subtle'}
-              >
-                {isListening ? <IconMicrophoneOff size={16} /> : <IconMicrophone size={16} />}
-              </ActionIcon>
-            }
-          />
-          
-          <Button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
-            loading={isLoading}
-            leftSection={<IconSend size={16} />}
-          >
-            Send
-          </Button>
-        </Group>
-      </Paper>
+        {/* Chat Messages */}
+        <Paper shadow="sm" radius="md" withBorder style={{ height: '60vh' }}>
+          <ScrollArea h="100%" p="md" viewportRef={viewport}>
+            <Stack gap="md">
+              <AnimatePresence>
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Group
+                      align="flex-start"
+                      gap="sm"
+                      style={{
+                        flexDirection: message.sender === 'user' ? 'row-reverse' : 'row',
+                      }}
+                    >
+                      <ThemeIcon
+                        size="lg"
+                        color={message.sender === 'user' ? 'blue' : 'indigo'}
+                        variant="light"
+                      >
+                        {message.sender === 'user' ? (
+                          <IconBrain size={20} />
+                        ) : (
+                          <IconBrain size={20} />
+                        )}
+                      </ThemeIcon>
+                      
+                      <Paper
+                        p="md"
+                        radius="lg"
+                        style={{
+                          maxWidth: '70%',
+                          backgroundColor: message.sender === 'user' 
+                            ? 'var(--mantine-color-blue-0)' 
+                            : 'var(--mantine-color-gray-0)',
+                        }}
+                      >
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="flex-start">
+                            <Text size="sm" fw={500}>
+                              {message.sender === 'user' ? 'You' : 'AI Tutor'}
+                            </Text>
+                            {message.type && (
+                              <Badge size="xs" variant="light">
+                                {message.type}
+                              </Badge>
+                            )}
+                          </Group>
+                          
+                          <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                            {message.content}
+                          </Text>
+                          
+                          <Text size="xs" c="dimmed">
+                            {message.timestamp.toLocaleTimeString()}
+                          </Text>
+                        </Stack>
+                      </Paper>
+                    </Group>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              
+              {isLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <Group align="flex-start" gap="sm">
+                    <ThemeIcon size="lg" color="indigo" variant="light">
+                      <IconBrain size={20} />
+                    </ThemeIcon>
+                    <Paper p="md" radius="lg" style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+                      <Group gap="sm">
+                        <Loader size="sm" />
+                        <Text size="sm" c="dimmed">
+                          {t('aiTutor.thinking')}
+                        </Text>
+                      </Group>
+                    </Paper>
+                  </Group>
+                </motion.div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </Stack>
+          </ScrollArea>
+        </Paper>
+
+        {/* Input Area */}
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group gap="sm">
+            <TextInput
+              placeholder={t('aiTutor.askAnything')}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              style={{ flex: 1 }}
+              size="lg"
+            />
+            
+            <ActionIcon
+              size="lg"
+              variant="subtle"
+              color="gray"
+              title={t('aiTutor.voiceInput')}
+            >
+              <IconMicrophone size={20} />
+            </ActionIcon>
+            
+            <ActionIcon
+              size="lg"
+              variant="subtle"
+              color="gray"
+              title={t('aiTutor.textToSpeech')}
+            >
+              <IconVolume size={20} />
+            </ActionIcon>
+            
+            <Button
+              onClick={() => handleSendMessage()}
+              loading={isLoading}
+              leftSection={<IconSend size={16} />}
+              size="lg"
+              disabled={!inputValue.trim()}
+            >
+              Send
+            </Button>
+          </Group>
+        </Paper>
+      </Stack>
     </Container>
   );
 };

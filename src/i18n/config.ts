@@ -3,28 +3,28 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 // Import translation files
-import enTranslations from './locales/en.json';
-import esTranslations from './locales/es.json';
-import frTranslations from './locales/fr.json';
-import deTranslations from './locales/de.json';
-import hiTranslations from './locales/hi.json';
-import zhTranslations from './locales/zh.json';
-import arTranslations from './locales/ar.json';
-import ptTranslations from './locales/pt.json';
-import ruTranslations from './locales/ru.json';
-import jaTranslations from './locales/ja.json';
+import en from './locales/en.json';
+import es from './locales/es.json';
+import fr from './locales/fr.json';
+import de from './locales/de.json';
+import hi from './locales/hi.json';
+import zh from './locales/zh.json';
+import ar from './locales/ar.json';
+import pt from './locales/pt.json';
+import ru from './locales/ru.json';
+import ja from './locales/ja.json';
 
 const resources = {
-  en: { translation: enTranslations },
-  es: { translation: esTranslations },
-  fr: { translation: frTranslations },
-  de: { translation: deTranslations },
-  hi: { translation: hiTranslations },
-  zh: { translation: zhTranslations },
-  ar: { translation: arTranslations },
-  pt: { translation: ptTranslations },
-  ru: { translation: ruTranslations },
-  ja: { translation: jaTranslations },
+  en: { translation: en },
+  es: { translation: es },
+  fr: { translation: fr },
+  de: { translation: de },
+  hi: { translation: hi },
+  zh: { translation: zh },
+  ar: { translation: ar },
+  pt: { translation: pt },
+  ru: { translation: ru },
+  ja: { translation: ja },
 };
 
 i18n
@@ -33,16 +33,15 @@ i18n
   .init({
     resources,
     fallbackLng: 'en',
-    debug: process.env.NODE_ENV === 'development',
+    debug: false,
+    
     interpolation: {
       escapeValue: false,
     },
+
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],
-    },
-    react: {
-      useSuspense: false,
     },
   });
 

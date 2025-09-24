@@ -7,20 +7,21 @@ import {
   ActionIcon,
   Menu,
   Avatar,
-  Select,
-  useMantineColorScheme,
+  UnstyledButton,
   ThemeIcon,
-  Tooltip,
+  Select,
 } from '@mantine/core';
 import {
+  IconBrain,
   IconSun,
   IconMoon,
-  IconBell,
-  IconSettings,
   IconLogout,
-  IconSchool,
+  IconSettings,
+  IconUser,
   IconWorld,
 } from '@tabler/icons-react';
+import { useMantineColorScheme } from '@mantine/core';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface HeaderProps {
@@ -30,7 +31,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
   const { t, i18n } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
   const languages = [
@@ -57,88 +58,85 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
       <Group>
         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
         
-        <Group gap="xs">
-          <ThemeIcon
-            size="lg"
-            radius="md"
-            variant="gradient"
-            gradient={
-              user?.role === 'student'
-                ? { from: 'indigo', to: 'purple' }
-                : { from: 'blue', to: 'cyan' }
-            }
-          >
-            <IconSchool size={20} />
-          </ThemeIcon>
-          
-          <div>
-            <Text size="lg" fw={700} c={user?.role === 'student' ? 'indigo' : 'blue'}>
-              EduMentor AI
-            </Text>
-            <Text size="xs" c="dimmed">
-              {user?.role === 'student' ? 'Student Portal' : 'Teacher Dashboard'}
-            </Text>
-          </div>
-        </Group>
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Group gap="sm">
+            <ThemeIcon
+              size="lg"
+              color={user?.role === 'student' ? 'indigo' : 'blue'}
+              variant="light"
+            >
+              <IconBrain size={20} />
+            </ThemeIcon>
+            <div>
+              <Text fw={700} size="lg">
+                EduMentor AI
+              </Text>
+              <Text size="xs" c="dimmed">
+                {user?.role === 'student' ? t('common.studentPortal') : t('common.teacherDashboard')}
+              </Text>
+            </div>
+          </Group>
+        </motion.div>
       </Group>
 
-      <Group>
-        <Tooltip label={t('common.changeLanguage')}>
+      <Group gap="sm">
+        {/* Language Selector */}
         <Select
           data={languages}
           value={i18n.language}
           onChange={handleLanguageChange}
           leftSection={<IconWorld size={16} />}
           w={140}
-          size="xs"
-            searchable
-            clearable={false}
+          size="sm"
+          searchable
         />
-        </Tooltip>
 
-        <Tooltip label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}>
+        {/* Theme Toggle */}
         <ActionIcon
-          variant="subtle"
           onClick={() => toggleColorScheme()}
+          variant="subtle"
           size="lg"
-            aria-label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
+          aria-label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
         >
           {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
         </ActionIcon>
-        </Tooltip>
 
-        <Tooltip label={t('common.notifications')}>
-        <ActionIcon variant="subtle" size="lg">
-          <IconBell size={18} />
-        </ActionIcon>
-        </Tooltip>
-
+        {/* User Menu */}
         <Menu shadow="md" width={200}>
           <Menu.Target>
-            <Group style={{ cursor: 'pointer' }} gap="sm">
-              <Avatar size="sm" radius="xl">
-                {user?.name?.charAt(0).toUpperCase()}
-              </Avatar>
-              <div style={{ flex: 1 }}>
-                <Text size="sm" fw={500}>
-                  {user?.name}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {t(`common.${user?.role}`)}
-                </Text>
-              </div>
-            </Group>
+            <UnstyledButton>
+              <Group gap="sm">
+                <Avatar size="sm" color={user?.role === 'student' ? 'indigo' : 'blue'}>
+                  <IconUser size={16} />
+                </Avatar>
+                <div style={{ flex: 1 }}>
+                  <Text size="sm" fw={500}>
+                    {user?.name}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {user?.role === 'student' ? t('common.student') : t('common.teacher')}
+                  </Text>
+                </div>
+              </Group>
+            </UnstyledButton>
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item leftSection={<IconSettings size={14} />}>
+            <Menu.Label>Account</Menu.Label>
+            <Menu.Item
+              leftSection={<IconSettings size={14} />}
+              onClick={() => window.dispatchEvent(new CustomEvent('changeTab', { detail: 'settings' }))}
+            >
               {t('navigation.settings')}
             </Menu.Item>
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconLogout size={14} />}
               color="red"
-              onClick={logout}
+              onClick={signOut}
             >
               {t('auth.logout')}
             </Menu.Item>

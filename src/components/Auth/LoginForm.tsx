@@ -10,21 +10,23 @@ import {
   Button,
   Group,
   Stack,
-  SegmentedControl,
+  Divider,
+  Select,
+  NumberInput,
   Center,
-  Box,
   ThemeIcon,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { IconBrain, IconUser, IconChalkboard } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
-import { IconSchool, IconUser, IconBook } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { notifications } from '@mantine/notifications';
 
 export const LoginForm: React.FC = () => {
   const { t } = useTranslation();
-  const { login, register, isLoading } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [role, setRole] = useState<'student' | 'teacher'>('student');
+  const { signIn, signUp } = useAuth();
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm({
     initialValues: {
@@ -32,154 +34,205 @@ export const LoginForm: React.FC = () => {
       password: '',
       confirmPassword: '',
       name: '',
+      role: 'student' as 'student' | 'teacher',
+      gradeLevel: 10,
     },
     validate: {
       email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
       password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
       confirmPassword: (value, values) =>
-        mode === 'register' && value !== values.password ? 'Passwords do not match' : null,
-      name: (value) => (mode === 'register' && !value ? 'Name is required' : null),
+        !isLogin && value !== values.password ? 'Passwords do not match' : null,
+      name: (value) => (!isLogin && !value ? 'Name is required' : null),
     },
   });
 
   const handleSubmit = async (values: typeof form.values) => {
+    setIsLoading(true);
     try {
-      if (mode === 'login') {
-        await login(values.email, values.password);
+      if (isLogin) {
+        await signIn(values.email, values.password);
+        notifications.show({
+          title: 'Welcome back!',
+          message: 'Successfully signed in',
+          color: 'green',
+        });
       } else {
-        await register(values.email, values.password, {
-          name: values.name,
-          role,
-          email: values.email,
-          preferences: {
-            language: 'en',
-            theme: 'light',
-            difficulty: 'intermediate',
-          },
+        await signUp(
+          values.email,
+          values.password,
+          values.name,
+          values.role,
+          values.role === 'student' ? values.gradeLevel : undefined
+        );
+        notifications.show({
+          title: 'Account created!',
+          message: 'Welcome to EduMentor AI',
+          color: 'green',
         });
       }
-    } catch (error) {
-      // Error handling is done in the auth context
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Something went wrong',
+        color: 'red',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Container size={420} my={40}>
+    <Container size="sm" py="xl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <Center mb="xl">
-          <ThemeIcon size={60} radius="md" variant="gradient" gradient={{ from: 'indigo', to: 'purple' }}>
-            <IconSchool size={30} />
-          </ThemeIcon>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          >
+            <ThemeIcon size={80} color="indigo" variant="light">
+              <IconBrain size={40} />
+            </ThemeIcon>
+          </motion.div>
         </Center>
 
-        <Title ta="center" mb="md">
-          EduMentor AI
-        </Title>
-
-        <Text c="dimmed" size="sm" ta="center" mb="xl">
-          {mode === 'login' ? t('auth.welcomeBack') : t('auth.createAccount')}
-        </Text>
-
-        <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-          <Stack>
-            <SegmentedControl
-              value={mode}
-              onChange={(value) => setMode(value as 'login' | 'register')}
-              data={[
-                { label: t('auth.login'), value: 'login' },
-                { label: t('auth.signup'), value: 'register' },
-              ]}
-              fullWidth
-            />
-
-            {mode === 'register' && (
-              <SegmentedControl
-                value={role}
-                onChange={(value) => setRole(value as 'student' | 'teacher')}
-                data={[
-                  {
-                    label: (
-                      <Center>
-                        <IconUser size={16} />
-                        <Box ml={10}>Student</Box>
-                      </Center>
-                    ),
-                    value: 'student',
-                  },
-                  {
-                    label: (
-                      <Center>
-                        <IconBook size={16} />
-                        <Box ml={10}>Teacher</Box>
-                      </Center>
-                    ),
-                    value: 'teacher',
-                  },
-                ]}
-                fullWidth
-              />
-            )}
+        <Paper shadow="md" p="xl" radius="md" withBorder>
+          <Stack gap="lg">
+            <div style={{ textAlign: 'center' }}>
+              <Title order={2} mb="xs">
+                {isLogin ? t('auth.welcomeBack') : t('auth.createAccount')}
+              </Title>
+              <Text c="dimmed" size="lg">
+                {isLogin 
+                  ? 'Sign in to continue your learning journey'
+                  : 'Join thousands of learners worldwide'
+                }
+              </Text>
+            </div>
 
             <form onSubmit={form.onSubmit(handleSubmit)}>
-              <Stack>
-                {mode === 'register' && (
-                  <TextInput
-                    label="Name"
-                    placeholder="Your name"
-                    required
-                    {...form.getInputProps('name')}
-                  />
+              <Stack gap="md">
+                {!isLogin && (
+                  <>
+                    <TextInput
+                      label={t('auth.name')}
+                      placeholder="Your full name"
+                      {...form.getInputProps('name')}
+                    />
+
+                    <Select
+                      label="Account Type"
+                      data={[
+                        { value: 'student', label: 'Student' },
+                        { value: 'teacher', label: 'Teacher' },
+                      ]}
+                      {...form.getInputProps('role')}
+                      leftSection={
+                        form.values.role === 'student' ? (
+                          <IconUser size={16} />
+                        ) : (
+                          <IconChalkboard size={16} />
+                        )
+                      }
+                    />
+
+                    {form.values.role === 'student' && (
+                      <NumberInput
+                        label="Grade Level"
+                        min={1}
+                        max={12}
+                        {...form.getInputProps('gradeLevel')}
+                      />
+                    )}
+                  </>
                 )}
 
                 <TextInput
                   label={t('auth.email')}
                   placeholder="your@email.com"
-                  required
                   {...form.getInputProps('email')}
                 />
 
                 <PasswordInput
                   label={t('auth.password')}
                   placeholder="Your password"
-                  required
                   {...form.getInputProps('password')}
                 />
 
-                {mode === 'register' && (
+                {!isLogin && (
                   <PasswordInput
                     label={t('auth.confirmPassword')}
                     placeholder="Confirm your password"
-                    required
                     {...form.getInputProps('confirmPassword')}
                   />
                 )}
 
-                <Button type="submit" fullWidth loading={isLoading} mt="xl">
-                  {mode === 'login' ? t('auth.login') : t('auth.signup')}
+                <Button
+                  type="submit"
+                  loading={isLoading}
+                  size="lg"
+                  variant="gradient"
+                  gradient={{ from: 'indigo', to: 'purple' }}
+                  fullWidth
+                >
+                  {isLogin ? t('auth.login') : t('auth.signup')}
                 </Button>
               </Stack>
             </form>
 
-            <Text c="dimmed" size="sm" ta="center" mt="md">
-              {mode === 'login' ? t('auth.dontHaveAccount') : t('auth.alreadyHaveAccount')}{' '}
-              <Text
-                component="button"
-                type="button"
-                c="blue"
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              >
-                {mode === 'login' ? t('auth.signup') : t('auth.login')}
-              </Text>
-            </Text>
+            <Divider label="or" labelPosition="center" />
 
-            <Text c="dimmed" size="xs" ta="center" mt="md">
-              Demo: Use any email/password combination
-            </Text>
+            <Group justify="center">
+              <Text size="sm" c="dimmed">
+                {isLogin ? t('auth.dontHaveAccount') : t('auth.alreadyHaveAccount')}
+              </Text>
+              <Button
+                variant="subtle"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  form.reset();
+                }}
+              >
+                {isLogin ? t('auth.signup') : t('auth.login')}
+              </Button>
+            </Group>
+
+            {/* Demo Accounts */}
+            <Paper p="md" bg="gray.0" radius="sm">
+              <Text size="sm" fw={500} mb="xs">
+                Demo Accounts:
+              </Text>
+              <Group gap="xs">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => {
+                    form.setValues({
+                      email: 'student@demo.com',
+                      password: 'demo123',
+                    });
+                  }}
+                >
+                  Student Demo
+                </Button>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => {
+                    form.setValues({
+                      email: 'teacher@demo.com',
+                      password: 'demo123',
+                    });
+                  }}
+                >
+                  Teacher Demo
+                </Button>
+              </Group>
+            </Paper>
           </Stack>
         </Paper>
       </motion.div>
