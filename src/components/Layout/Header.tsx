@@ -20,7 +20,7 @@ import {
   IconUser,
   IconWorld,
 } from '@tabler/icons-react';
-import { useMantineColorScheme } from '@mantine/hooks';
+import { useMantineColorScheme } from '@mantine/core';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 
