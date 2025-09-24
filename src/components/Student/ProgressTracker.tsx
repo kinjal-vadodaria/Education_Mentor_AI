@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -33,8 +32,8 @@ import { getStudentProgress, getQuizResults } from '../../services/supabase';
 
 export const ProgressTracker: React.FC = () => {
   const { user } = useAuth();
-  const [progress, setProgress] = useState<ProgressData[]>([]);
-  const [quizHistory, setQuizHistory] = useState<QuizResult[]>([]);
+  const [progressData, setProgressData] = useState<ProgressData[]>([]);
+  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
 
   interface QuizResult {
     quiz_topic: string;
@@ -51,9 +50,9 @@ export const ProgressTracker: React.FC = () => {
 
   useEffect(() => {
     loadProgressData();
-  }, [user]);
+  }, [user, loadProgressData]);
 
-  const loadProgressData = async () => {
+  const loadProgressData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -62,20 +61,27 @@ export const ProgressTracker: React.FC = () => {
         getQuizResults(user.id),
       ]);
 
-      if (progressData.data) setProgress(progressData.data as ProgressData[]);
-      if (quizData.data) setQuizHistory(quizData.data);
+      if (progressData.data) {
+        setProgressData(progressData.data);
+      }
+      
+      if (quizData.data) {
+        setQuizResults(quizData.data);
+      }
     } catch (error) {
       console.error('Error loading progress data:', error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [user]);
 
   // Calculate stats
-  const totalXP = progress.reduce((sum, p) => sum + (p.xp_points || 0), 0);
+  const totalXP = progressData.reduce((sum, p) => sum + (p.xp_points || 0), 0);
   const currentLevel = Math.floor(totalXP / 100) + 1;
   const xpToNextLevel = 100 - (totalXP % 100);
   const levelProgress = ((totalXP % 100) / 100) * 100;
-  const currentStreak = Math.max(...progress.map(p => p.current_streak || 0), 0);
-  const totalBadges = progress.reduce((sum, p) => sum + (p.badges?.length || 0), 0);
+  const currentStreak = Math.max(...progressData.map(p => p.current_streak || 0), 0);
+  const totalBadges = progressData.reduce((sum, p) => sum + (p.badges?.length || 0), 0);
 
   // Mock data for charts
   const performanceData = [
@@ -189,7 +195,7 @@ export const ProgressTracker: React.FC = () => {
                       Quizzes Completed
                     </Text>
                     <Text size="xl" fw={700}>
-                      {quizHistory.length}
+                      {quizResults.length}
                     </Text>
                   </div>
                   <ThemeIcon color="green" variant="light" size="lg">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Grid,
@@ -7,14 +7,10 @@ import {
   Title,
   Group,
   Stack,
-  Progress,
   Badge,
   ThemeIcon,
-  ActionIcon,
   Container,
   Paper,
-  RingProgress,
-  Center,
 } from '@mantine/core';
 import {
   IconTrophy,
@@ -27,17 +23,15 @@ import {
   IconClock,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentProgress, getQuizResults } from '../../services/supabase';
 
 export const StudentDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [progress, setProgress] = useState<ProgressData[]>([]);
   const [recentQuizzes, setRecentQuizzes] = useState<QuizResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [setLoading] = useState(true);
 
   interface QuizResult {
     quiz_topic: string;
@@ -54,9 +48,9 @@ export const StudentDashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, [user]);
+  }, [loadDashboardData]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -72,7 +66,7 @@ export const StudentDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, setProgress, setRecentQuizzes, setLoading]);
 
   const totalXP = (progress as ProgressData[]).reduce((sum, p) => sum + (p.xp_points || 0), 0);
   const currentLevel = Math.floor(totalXP / 100) + 1;

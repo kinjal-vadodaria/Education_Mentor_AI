@@ -150,7 +150,7 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handlePasswordChange = async (values: typeof passwordForm.values) => {
+  const handlePasswordChange = async () => {
     setIsLoading(true);
     try {
       // In a real app, you would call a password change API

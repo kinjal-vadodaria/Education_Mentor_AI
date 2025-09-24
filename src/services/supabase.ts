@@ -53,18 +53,25 @@ export const getCurrentUser = async () => {
   
   if (!user) return null;
 
-  const { data: profile, error } = await supabase
+  // First check if the user exists in our custom users table
+  const { data: userProfile, error: userError } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .single();
 
-  if (error) {
-    errorReporting.reportError(error, { context: 'GET_CURRENT_USER' });
-    throw error;
+  if (userProfile) {
+    return userProfile;
   }
 
-  return profile;
+  // If not found in users table, this might be a new auth user without a profile
+  if (userError && userError.code !== 'PGRST116') {
+    errorReporting.reportError(userError, { context: 'GET_CURRENT_USER' });
+    throw userError;
+  }
+
+  // Return null if no profile exists yet
+  return null;
 };
 
 export const createUserProfile = async (userId: string, profileData: {

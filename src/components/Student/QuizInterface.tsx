@@ -65,7 +65,7 @@ export const QuizInterface: React.FC = () => {
     } else if (timeLeft === 0 && currentQuiz && !showResults) {
       handleSubmitQuiz();
     }
-  }, [timeLeft, currentQuiz, showResults]);
+  }, [timeLeft, currentQuiz, showResults, handleSubmitQuiz]);
 
   const startQuiz = async (topic: string, difficulty: string) => {
     setIsLoading(true);
@@ -110,7 +110,7 @@ export const QuizInterface: React.FC = () => {
     }
   };
 
-  const handleSubmitQuiz = async () => {
+  const handleSubmitQuiz = useCallback(async () => {
     if (!currentQuiz) return;
 
     setIsLoading(true);
@@ -118,29 +118,9 @@ export const QuizInterface: React.FC = () => {
       const result = await aiService.gradeQuiz(currentQuiz, answers, user?.id);
       setQuizResult(result);
       setShowResults(true);
-      
-      const percentage = (result.score / result.totalPoints) * 100;
-      if (percentage >= 90) {
-        notifications.show({
-          title: 'Excellent!',
-          message: 'Outstanding performance! 🎉',
-          color: 'green',
-        });
-      } else if (percentage >= 70) {
-        notifications.show({
-          title: 'Good Job!',
-          message: 'Well done! 👍',
-          color: 'blue',
-        });
-      } else {
-        notifications.show({
-          title: 'Keep Practicing!',
-          message: 'You\'re improving! 💪',
-          color: 'orange',
-        });
-      }
-    } catch {
-      notifications.show({
+    } catch (error) {
+      console.error('Error grading quiz:', error);
+      showNotification({
         title: 'Error',
         message: 'Failed to grade quiz. Please try again.',
         color: 'red',
@@ -148,7 +128,7 @@ export const QuizInterface: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentQuiz, answers, user, setQuizResult, setShowResults, setIsLoading]);
 
   const resetQuiz = () => {
     setCurrentQuiz(null);
