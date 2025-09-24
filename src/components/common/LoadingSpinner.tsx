@@ -1,4 +1,4 @@
-import React from 'react';
+import { } from 'react';
 import { Center, Loader, Stack, Text } from '@mantine/core';
 import { motion } from 'framer-motion';
 

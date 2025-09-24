@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { errorReporting } from './errorReporting';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
@@ -18,7 +19,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Add global error handler for Supabase
-supabase.auth.onAuthStateChange((event, _session) => {
+supabase.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_OUT') {
     // Clear any cached data
     localStorage.removeItem('supabase.auth.token');
@@ -72,7 +73,16 @@ export interface ChatMessage {
 // Helper function to handle database errors
 const handleDatabaseError = (error: unknown, operation: string) => {
   console.error(`Database error in ${operation}:`, error);
-  errorReporting.reportError(error, { context: `DATABASE_${operation.toUpperCase()}` });
+
+  // Handle the error type properly for error reporting
+  if (error instanceof Error) {
+    errorReporting.reportError(error, { context: `DATABASE_${operation.toUpperCase()}` });
+  } else {
+    // Create an Error object for unknown error types
+    const errorObj = new Error(typeof error === 'string' ? error : `Unknown error in ${operation}`);
+    errorReporting.reportError(errorObj, { context: `DATABASE_${operation.toUpperCase()}`, originalError: error });
+  }
+
   return { data: null, error };
 };
 
@@ -247,7 +257,7 @@ export const getChatHistory = async (userId: string, sessionId?: string) => {
 };
 
 // Real-time subscriptions
-export const subscribeToUserProgress = (userId: string, callback: (payload: any) => void) => {
+export const subscribeToUserProgress = (userId: string, callback: (payload: RealtimePostgresChangesPayload<StudentProgress>) => void) => {
   return supabase
     .channel('student_progress')
     .on(

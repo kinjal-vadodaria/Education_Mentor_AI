@@ -1,4 +1,4 @@
-import React from 'react';
+import { } from 'react';
 import ReactDOM from 'react-dom/client';
 import { MantineProvider, createTheme } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
@@ -64,12 +64,10 @@ const theme = createTheme({
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <MantineProvider theme={theme} defaultColorScheme="light">
-        <Notifications position="top-right" />
-        <App />
-      </MantineProvider>
-    </ErrorBoundary>
-  </React.StrictMode>,
+  <ErrorBoundary>
+    <MantineProvider theme={theme} defaultColorScheme="light">
+      <Notifications position="top-right" />
+      <App />
+    </MantineProvider>
+  </ErrorBoundary>,
 );

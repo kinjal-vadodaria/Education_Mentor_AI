@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Grid,
@@ -7,14 +7,10 @@ import {
   Title,
   Group,
   Stack,
-  Progress,
   Badge,
   ThemeIcon,
-  ActionIcon,
   Container,
   Paper,
-  RingProgress,
-  Center,
 } from '@mantine/core';
 import {
   IconTrophy,
@@ -30,31 +26,26 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentProgress, getQuizResults } from '../../services/supabase';
 
-export const StudentDashboard: React.FC = () => {
+interface QuizResult {
+  quiz_topic: string;
+  score: number;
+  total_questions: number;
+  completed_at: string;
+}
+
+interface ProgressData {
+  xp_points: number;
+  current_streak: number;
+  badges?: string[];
+}
+
+export const StudentDashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [progress, setProgress] = useState<any[]>([]);
+  const [progress, setProgress] = useState<ProgressData[]>([]);
   const [recentQuizzes, setRecentQuizzes] = useState<QuizResult[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  interface QuizResult {
-    quiz_topic: string;
-    score: number;
-    total_questions: number;
-    completed_at: string;
-  }
-
-  interface ProgressData {
-    xp_points: number;
-    current_streak: number;
-    badges?: string[];
-  }
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [user]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -63,20 +54,22 @@ export const StudentDashboard: React.FC = () => {
         getQuizResults(user.id),
       ]);
 
-      if (progressData.data) setProgress(progressData.data as ProgressData[]);
+      if (progressData.data) setProgress(progressData.data);
       if (quizData.data) setRecentQuizzes(quizData.data.slice(0, 5));
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [user]);
 
-  const totalXP = (progress as ProgressData[]).reduce((sum, p) => sum + (p.xp_points || 0), 0);
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const totalXP = progress.reduce((sum, p) => sum + (p.xp_points || 0), 0);
   const currentLevel = Math.floor(totalXP / 100) + 1;
   const xpToNextLevel = 100 - (totalXP % 100);
-  const currentStreak = Math.max(...(progress as ProgressData[]).map(p => p.current_streak || 0), 0);
-  const totalBadges = (progress as ProgressData[]).reduce((sum, p) => sum + (p.badges?.length || 0), 0);
+  const currentStreak = Math.max(...progress.map(p => p.current_streak || 0), 0);
+  const totalBadges = progress.reduce((sum, p) => sum + (p.badges?.length || 0), 0);
 
   const stats = [
     {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -8,7 +8,6 @@ import {
   TextInput,
   PasswordInput,
   Button,
-  Group,
   Stack,
   SegmentedControl,
   Center,
