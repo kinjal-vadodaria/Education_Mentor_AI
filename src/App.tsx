@@ -17,6 +17,8 @@ import { LessonPlanner } from './components/Teacher/LessonPlanner';
 import { Analytics } from './components/Teacher/Analytics';
 import { StudentManagement } from './components/Teacher/StudentManagement';
 import { Settings } from './components/common/Settings';
+import { Library } from './components/Student/Library';
+import { Resources } from './components/Teacher/Resources';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -55,7 +57,7 @@ const AppContent: React.FC = () => {
         case 'progress':
           return <ProgressTracker />;
         case 'library':
-          return <Container>Library coming soon...</Container>;
+          return <Library />;
         case 'settings':
           return <Settings />;
         default:
@@ -72,7 +74,7 @@ const AppContent: React.FC = () => {
         case 'students':
           return <StudentManagement />;
         case 'resources':
-          return <Container>Resources coming soon...</Container>;
+          return <Resources />;
         case 'settings':
           return <Settings />;
         default:

@@ -32,8 +32,14 @@ import {
   IconTrendingUp,
   IconTrendingDown,
   IconTarget,
+  IconX,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { getAllStudents, createStudent } from '../../services/supabase';
+import { notifications } from '@mantine/notifications';
+import { errorReporting } from '../../services/errorReporting';
+import { useForm } from '@mantine/form';
 
 interface Student {
   id: number;
@@ -53,8 +59,49 @@ export const StudentManagement: React.FC = (): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
-  const students = [
+  // Check if user is teacher
+  if (user?.role !== 'teacher') {
+    return (
+      <Container size="sm">
+        <Center style={{ height: '60vh' }}>
+          <Stack align="center">
+            <ThemeIcon size={80} color="red" variant="light">
+              <IconX size={40} />
+            </ThemeIcon>
+            <Title order={3}>Access Denied</Title>
+            <Text c="dimmed" ta="center">
+              This section is only available to teachers.
+            </Text>
+          </Stack>
+        </Center>
+      </Container>
+    );
+  }
+
+  const addStudentForm = useForm({
+    initialValues: {
+      name: '',
+      email: '',
+      grade_level: 10,
+      password: '',
+      confirmPassword: '',
+    },
+    validate: {
+      name: (value) => (!value ? 'Name is required' : null),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      confirmPassword: (value, values) =>
+        value !== values.password ? 'Passwords do not match' : null,
+    },
+  });
+
+  const mockStudents = [
     {
       id: 1,
       name: 'Sarah Johnson',
@@ -122,17 +169,110 @@ export const StudentManagement: React.FC = (): JSX.Element => {
     },
   ];
 
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  const loadStudents = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await getAllStudents();
+      
+      if (error) {
+        throw error;
+      }
+
+      // Transform data to match component interface
+      const transformedStudents = (data || []).map(student => ({
+        id: parseInt(student.id),
+        name: student.name,
+        email: student.email,
+        class: `Grade ${student.grade_level}`,
+        grade: 'A', // Mock grade
+        avgScore: 85 + Math.floor(Math.random() * 15), // Mock score
+        attendance: 85 + Math.floor(Math.random() * 15), // Mock attendance
+        assignments: { completed: 15 + Math.floor(Math.random() * 5), total: 20 },
+        trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)],
+        lastActive: '2 hours ago',
+        avatar: `https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150`,
+      }));
+
+      setStudents(transformedStudents);
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'LOAD_STUDENTS' });
+      // Use mock data as fallback
+      setStudents(mockStudents);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddStudent = async (values: typeof addStudentForm.values) => {
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await createStudent({
+        name: values.name,
+        email: values.email,
+        grade_level: values.grade_level,
+        password: values.password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      notifications.show({
+        title: 'Success',
+        message: 'Student account created successfully!',
+        color: 'green',
+      });
+
+      setShowAddModal(false);
+      addStudentForm.reset();
+      loadStudents();
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'CREATE_STUDENT' });
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to create student account',
+        color: 'red',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditStudent = (student: Student) => {
+    // In a real implementation, open edit modal
+    notifications.show({
+      title: 'Feature Coming Soon',
+      message: 'Student editing functionality will be available soon',
+      color: 'blue',
+    });
+  };
+
+  const handleDeleteStudent = (studentId: number) => {
+    // In a real implementation, delete student
+    notifications.show({
+      title: 'Feature Coming Soon',
+      message: 'Student deletion functionality will be available soon',
+      color: 'blue',
+    });
+  };
+
   const classes = [
     { value: 'all', label: 'All Classes' },
-    { value: 'physics-10', label: 'Physics - Grade 10' },
-    { value: 'math-11', label: 'Mathematics - Grade 11' },
-    { value: 'chemistry-12', label: 'Chemistry - Grade 12' },
+    { value: 'grade-9', label: 'Grade 9' },
+    { value: 'grade-10', label: 'Grade 10' },
+    { value: 'grade-11', label: 'Grade 11' },
+    { value: 'grade-12', label: 'Grade 12' },
   ];
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          student.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesClass = selectedClass === 'all' || student.class.toLowerCase().includes(selectedClass.replace('-', ' '));
+    const matchesClass = selectedClass === 'all' || 
+                        student.class.toLowerCase().includes(selectedClass.replace('grade-', 'grade '));
     return matchesSearch && matchesClass;
   });
 
@@ -184,7 +324,10 @@ export const StudentManagement: React.FC = (): JSX.Element => {
               Monitor and manage your students&apos; progress and performance
             </Text>
           </div>
-          <Button leftSection={<IconUserPlus size={16} />}>
+          <Button 
+            leftSection={<IconUserPlus size={16} />}
+            onClick={() => setShowAddModal(true)}
+          >
             Add Student
           </Button>
         </Group>
@@ -348,6 +491,7 @@ export const StudentManagement: React.FC = (): JSX.Element => {
                         <ActionIcon
                           variant="subtle"
                           color="blue"
+                          onClick={() => handleEditStudent(student)}
                           onClick={() => setSelectedStudent(student)}
                         >
                           <IconEye size={16} />
@@ -355,7 +499,11 @@ export const StudentManagement: React.FC = (): JSX.Element => {
                         <ActionIcon variant="subtle" color="gray">
                           <IconEdit size={16} />
                         </ActionIcon>
-                        <ActionIcon variant="subtle" color="red">
+                        <ActionIcon 
+                          variant="subtle" 
+                          color="red"
+                          onClick={() => handleDeleteStudent(student.id)}
+                        >
                           <IconTrash size={16} />
                         </ActionIcon>
                       </Group>
@@ -426,6 +574,71 @@ export const StudentManagement: React.FC = (): JSX.Element => {
               </Group>
             </Stack>
           )}
+        </Modal>
+
+        {/* Add Student Modal */}
+        <Modal
+          opened={showAddModal}
+          onClose={() => {
+            setShowAddModal(false);
+            addStudentForm.reset();
+          }}
+          title="Add New Student"
+          size="md"
+        >
+          <form onSubmit={addStudentForm.onSubmit(handleAddStudent)}>
+            <Stack gap="md">
+              <TextInput
+                label="Full Name"
+                placeholder="Student's full name"
+                {...addStudentForm.getInputProps('name')}
+              />
+
+              <TextInput
+                label="Email Address"
+                placeholder="student@school.edu"
+                {...addStudentForm.getInputProps('email')}
+              />
+
+              <NumberInput
+                label="Grade Level"
+                min={1}
+                max={12}
+                {...addStudentForm.getInputProps('grade_level')}
+              />
+
+              <PasswordInput
+                label="Password"
+                placeholder="Create a password"
+                {...addStudentForm.getInputProps('password')}
+              />
+
+              <PasswordInput
+                label="Confirm Password"
+                placeholder="Confirm the password"
+                {...addStudentForm.getInputProps('confirmPassword')}
+              />
+
+              <Group justify="flex-end" mt="md">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    addStudentForm.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  loading={isSubmitting}
+                  leftSection={<IconUserPlus size={16} />}
+                >
+                  Add Student
+                </Button>
+              </Group>
+            </Stack>
+          </form>
         </Modal>
       </motion.div>
     </Container>

@@ -20,6 +20,7 @@ import {
   Center,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { TagsInput } from '../common/TagsInput';
 import {
   IconFileText,
   IconClock,
@@ -32,6 +33,7 @@ import {
   IconPlus,
   IconWand,
   IconCheck,
+  IconTrash,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 
@@ -39,6 +41,7 @@ import { aiService, LessonPlan } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
 
 export const LessonPlanner: React.FC = () => {
+import { Textarea } from '@mantine/core';
   const { t } = useTranslation();
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);

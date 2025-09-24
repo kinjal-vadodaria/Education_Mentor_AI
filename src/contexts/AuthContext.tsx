@@ -53,12 +53,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(currentUser);
       
       // Handle role-based redirection after user data is loaded
-      if (currentUser && window.location.pathname === '/') {
+      if (currentUser && (window.location.pathname === '/' || window.location.pathname === '')) {
         console.log('🚀 Redirecting user based on role:', currentUser.role);
         if (currentUser.role === 'student') {
-          navigate('/student/dashboard');
+          navigate('/student/dashboard', { replace: true });
         } else if (currentUser.role === 'teacher') {
-          navigate('/teacher/dashboard');
+          navigate('/teacher/dashboard', { replace: true });
         }
       }
     } catch (error) {
@@ -70,14 +70,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        setIsLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           await refreshUser();
+        } else {
+          setUser(null);
         }
       } catch (error) {
         errorReporting.reportError(error, { context: 'INITIALIZE_AUTH' });
-        // Ensure loading state is reset even on error
-        setIsLoading(false);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -87,19 +89,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔐 Auth state changed:', event, session?.user?.id);
+      
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('✅ User signed in, refreshing profile...');
+        setIsLoading(true);
         await refreshUser();
+        setIsLoading(false);
       } else if (event === 'SIGNED_OUT') {
         console.log('👋 User signed out');
         setUser(null);
-        navigate('/');
+        navigate('/', { replace: true });
+        setIsLoading(false);
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Token refreshed');
+        // Don't change loading state for token refresh
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const handleSignIn = async (email: string, password: string) => {
     try {
