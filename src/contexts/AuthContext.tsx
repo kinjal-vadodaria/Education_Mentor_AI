@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { User as SupabaseUser, AuthError } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, User, signIn, signUp, signOut, getUserProfile } from '../services/supabase';
 import { notifications } from '@mantine/notifications';
 import { errorReporting } from '../services/errorReporting';
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await getUserProfile(userId);
       if (error) {
         console.error('Error loading user profile:', error);
-        errorReporting.reportError(new Error(String(error) || 'Failed to load user profile'), { context: 'LOAD_USER_PROFILE', userId });
+        errorReporting.reportError(error, { context: 'LOAD_USER_PROFILE', userId });
         
         // Create a basic profile if none exists
         const supabaseUserData = supabase.auth.getUser();
@@ -110,12 +110,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       errorReporting.reportUserAction('LOGIN_SUCCESS', { email });
-    } catch (error: unknown) {
-      const authError = error as AuthError;
-      errorReporting.reportError(new Error(authError.message || 'Login failed'), { context: 'LOGIN_FAILED', email });
+    } catch (error: any) {
+      errorReporting.reportError(error, { context: 'LOGIN_FAILED', email });
       notifications.show({
         title: 'Error',
-        message: authError.message || 'Failed to log in',
+        message: error.message || 'Failed to log in',
         color: 'red',
       });
       throw error;
@@ -137,12 +136,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       errorReporting.reportUserAction('REGISTER_SUCCESS', { email, role: userData.role });
-    } catch (error: unknown) {
-      const authError = error as AuthError;
-      errorReporting.reportError(new Error(authError.message || 'Registration failed'), { context: 'REGISTER_FAILED', email });
+    } catch (error: any) {
+      errorReporting.reportError(error, { context: 'REGISTER_FAILED', email });
       notifications.show({
         title: 'Error',
-        message: authError.message || 'Failed to create account',
+        message: error.message || 'Failed to create account',
         color: 'red',
       });
       throw error;
@@ -163,12 +161,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       errorReporting.reportUserAction('LOGOUT_SUCCESS');
-    } catch (error: unknown) {
-      const authError = error as AuthError;
-      errorReporting.reportError(new Error(authError.message || 'Logout failed'), { context: 'LOGOUT_FAILED' });
+    } catch (error: any) {
+      errorReporting.reportError(error, { context: 'LOGOUT_FAILED' });
       notifications.show({
         title: 'Error',
-        message: authError.message || 'Failed to log out',
+        message: error.message || 'Failed to log out',
         color: 'red',
       });
     }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Paper,
@@ -25,6 +26,7 @@ import {
   IconFilter,
   IconUserPlus,
   IconMail,
+  IconPhone,
   IconEye,
   IconEdit,
   IconTrash,
@@ -35,21 +37,10 @@ import {
 import { motion } from 'framer-motion';
 
 export const StudentManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedStudent, setSelectedStudent] = useState<{
-    id: number;
-    name: string;
-    email: string;
-    class: string;
-    grade: string;
-    avgScore: number;
-    attendance: number;
-    assignments: { completed: number; total: number };
-    trend: string;
-    lastActive: string;
-    avatar: string;
-  } | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
   const students = [
     {
@@ -172,7 +163,7 @@ export const StudentManagement: React.FC = () => {
           <div>
             <Title order={2}>Student Management</Title>
             <Text c="dimmed" size="lg">
-              Monitor and manage your students&apos; progress and performance
+              Monitor and manage your students' progress and performance
             </Text>
           </div>
           <Button leftSection={<IconUserPlus size={16} />}>
@@ -219,7 +210,7 @@ export const StudentManagement: React.FC = () => {
               placeholder="Search students..."
               leftSection={<IconSearch size={16} />}
               value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{ flex: 1 }}
             />
             <Select
@@ -256,13 +247,12 @@ export const StudentManagement: React.FC = () => {
               </Table.Thead>
               <Table.Tbody>
                 {filteredStudents.map((student, index) => (
-                  <motion.div
+                  <motion.tr
                     key={student.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <Table.Tr>
                     <Table.Td>
                       <Group gap="sm">
                         <Avatar src={student.avatar} size="sm" radius="xl" />
@@ -352,8 +342,7 @@ export const StudentManagement: React.FC = () => {
                         </ActionIcon>
                       </Group>
                     </Table.Td>
-                    </Table.Tr>
-                  </motion.div>
+                  </motion.tr>
                 ))}
               </Table.Tbody>
             </Table>

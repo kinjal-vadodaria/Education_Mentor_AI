@@ -66,13 +66,6 @@ export interface Question {
   points: number;
 }
 
-interface ParsedQuestion {
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  explanation: string;
-}
-
 export interface LessonPlan {
   id: string;
   title: string;
@@ -96,9 +89,9 @@ export interface Activity {
 
 class AIService {
   private genAI: GoogleGenerativeAI | null = null;
-  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+  private model: any = null;
   private rateLimiter = new RateLimiter(10, 60000); // 10 requests per minute
-  private cache = new Map<string, { data: unknown; timestamp: number }>();
+  private cache = new Map<string, { data: any; timestamp: number }>();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
@@ -121,7 +114,7 @@ class AIService {
     }
   }
 
-  private getCacheKey(method: string, ...args: unknown[]): string {
+  private getCacheKey(method: string, ...args: any[]): string {
     return `${method}_${JSON.stringify(args)}`;
   }
 
@@ -134,7 +127,7 @@ class AIService {
     return null;
   }
 
-  private setCache(key: string, data: unknown): void {
+  private setCache(key: string, data: any): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 
@@ -168,7 +161,7 @@ class AIService {
       }
       
       return result;
-    } catch (error) {
+    } catch {
       console.error('AI Service Error:', error);
       errorReporting.reportError(error as Error, { context: 'AI_REQUEST' });
       return fallbackFn();
@@ -187,7 +180,7 @@ class AIService {
     return this.makeAIRequest(
       async () => {
         const prompt = this.buildExplanationPrompt(topic, difficulty, language, gradeLevel);
-        const result = await this.model!.generateContent(prompt);
+        const result = await this.model.generateContent(prompt);
         const response = await result.response;
         const content = response.text();
 
@@ -237,7 +230,7 @@ class AIService {
     return this.makeAIRequest(
       async () => {
         const prompt = this.buildQuizPrompt(topic, difficulty, questionCount);
-        const result = await this.model!.generateContent(prompt);
+        const result = await this.model.generateContent(prompt);
         const response = await result.response;
         const content = response.text();
 
@@ -259,7 +252,7 @@ class AIService {
     return this.makeAIRequest(
       async () => {
         const prompt = this.buildLessonPlanPrompt(topic, grade, duration, subject);
-        const result = await this.model!.generateContent(prompt);
+        const result = await this.model.generateContent(prompt);
         const response = await result.response;
         const content = response.text();
 
@@ -519,7 +512,7 @@ class AIService {
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         if (parsed.questions) {
-          const questions: Question[] = parsed.questions.map((q: ParsedQuestion, index: number) => ({
+          const questions: Question[] = parsed.questions.map((q: any, index: number) => ({
             id: (index + 1).toString(),
             type: 'multiple-choice' as const,
             question: q.question,
@@ -559,7 +552,7 @@ class AIService {
     try {
       if (!this.model) return false;
       
-      const result = await this.model!.generateContent("Say 'OK' if you're working.");
+      const result = await this.model.generateContent("Say 'OK' if you're working.");
       const response = await result.response;
       return response.text().includes('OK');
     } catch (error) {

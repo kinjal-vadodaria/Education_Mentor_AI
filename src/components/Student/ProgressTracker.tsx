@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Paper,
@@ -27,8 +28,8 @@ import {
 } from '@tabler/icons-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { motion } from 'framer-motion';
-import { getStudentProgress, getQuizResults } from '../../services/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { getStudentProgress, getQuizResults } from '../../services/supabase';
 
 export const ProgressTracker: React.FC = () => {
   const { user } = useAuth();

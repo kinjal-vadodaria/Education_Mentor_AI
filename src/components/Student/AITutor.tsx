@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -29,9 +29,9 @@ import {
   IconBolt,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
 import { aiService } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface ChatMessage {
   id: string;
@@ -107,7 +107,7 @@ export const AITutor: React.FC = () => {
                            messageText.toLowerCase().includes('questions');
 
       if (isQuizRequest) {
-        await aiService.generateQuiz(messageText, difficulty, 5, user?.id);
+        const quiz = await aiService.generateQuiz(messageText, difficulty, 5, user?.id);
         const aiMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           content: `I've created a quiz for you on "${messageText}". Ready to test your knowledge?`,
@@ -163,7 +163,7 @@ export const AITutor: React.FC = () => {
     }
   };
 
-  const handleTextToSpeech = (_text: string) => {
+  const handleTextToSpeech = (text: string) => {
     if (isSpeaking) {
       setIsSpeaking(false);
       return;

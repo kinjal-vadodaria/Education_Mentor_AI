@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -26,9 +26,9 @@ import {
   IconRefresh,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
 import { aiService, Quiz } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
-import { useAuth } from '../../contexts/AuthContext';
 
 export const QuizInterface: React.FC = () => {
   const { t } = useTranslation();

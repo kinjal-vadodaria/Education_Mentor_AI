@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -34,6 +34,7 @@ import {
   IconCheck,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
 import { aiService, LessonPlan } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
 
@@ -171,7 +172,7 @@ export const LessonPlanner: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ gap: '1.5rem', display: 'flex', flexDirection: 'column' }}
+          className="space-y-6"
         >
           {/* Title Section */}
           <Paper shadow="sm" p="xl" radius="md" withBorder>
