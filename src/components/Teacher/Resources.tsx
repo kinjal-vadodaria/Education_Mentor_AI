@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Container,
   Paper,
@@ -8,7 +7,6 @@ import {
   Button,
   Group,
   Stack,
-  Card,
   Grid,
   ThemeIcon,
   Badge,
@@ -33,7 +31,6 @@ import {
   IconTrash,
   IconUpload,
   IconFile,
-  IconEye,
   IconDownload,
   IconX,
 } from '@tabler/icons-react';
@@ -59,7 +56,6 @@ interface LibraryItem {
 }
 
 export const Resources: React.FC = () => {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const [resources, setResources] = useState<LibraryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,25 +64,6 @@ export const Resources: React.FC = () => {
   const [editingResource, setEditingResource] = useState<LibraryItem | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileWithPath[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Check if user is teacher
-  if (user?.role !== 'teacher') {
-    return (
-      <Container size="sm">
-        <Center style={{ height: '60vh' }}>
-          <Stack align="center">
-            <ThemeIcon size={80} color="red" variant="light">
-              <IconX size={40} />
-            </ThemeIcon>
-            <Title order={3}>Access Denied</Title>
-            <Text c="dimmed" ta="center">
-              This section is only available to teachers.
-            </Text>
-          </Stack>
-        </Center>
-      </Container>
-    );
-  }
 
   const form = useForm({
     initialValues: {
@@ -171,7 +148,7 @@ export const Resources: React.FC = () => {
         fileType = file.type;
       }
 
-      const { data, error } = await createLibraryItem({
+      const { error } = await createLibraryItem({
         ...values,
         author_id: user.id,
         file_url: fileUrl || undefined,
@@ -209,7 +186,7 @@ export const Resources: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await updateLibraryItem(editingResource.id, values);
+      const { error } = await updateLibraryItem(editingResource.id, values);
 
       if (error) {
         throw error;

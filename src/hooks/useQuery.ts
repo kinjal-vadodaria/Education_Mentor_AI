@@ -79,7 +79,7 @@ export const useUpdateStudentProgress = () => {
 
       return data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate and refetch student progress
       queryClient.invalidateQueries({ queryKey: ['student-progress', variables.userId] });
     },
@@ -117,7 +117,7 @@ export const useSaveQuizResult = () => {
 
       return data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate and refetch quiz results
       queryClient.invalidateQueries({ queryKey: ['quiz-results', variables.userId] });
     },

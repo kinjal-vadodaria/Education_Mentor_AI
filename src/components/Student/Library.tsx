@@ -176,10 +176,10 @@ export const Library: React.FC = () => {
     }
 
     // Grade level filter for students
-    if (user?.role === 'student' && user?.grade_level) {
-      filtered = filtered.filter(item => 
-        !item.grade_level || 
-        Math.abs(item.grade_level - user.grade_level) <= 1
+    if (user?.role === 'student' && user?.grade_level !== undefined) {
+      filtered = filtered.filter(item =>
+        !item.grade_level ||
+        Math.abs(item.grade_level - user.grade_level!) <= 1
       );
     }
 

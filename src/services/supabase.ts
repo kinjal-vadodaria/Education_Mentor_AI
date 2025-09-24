@@ -18,6 +18,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Auth functions
 export const signIn = async (email: string, password: string) => {
+  // Handle demo accounts for development
+  if ((email === 'student@demo.com' || email === 'teacher@demo.com') && password === 'demo123') {
+    console.log('🎭 Using demo account for development');
+    return {
+      user: {
+        id: email === 'student@demo.com' ? 'demo-student-id' : 'demo-teacher-id',
+        email: email,
+        user_metadata: {
+          name: email === 'student@demo.com' ? 'Demo Student' : 'Demo Teacher',
+          role: email === 'student@demo.com' ? 'student' : 'teacher',
+          grade_level: email === 'student@demo.com' ? 10 : undefined,
+        },
+        created_at: new Date().toISOString(),
+      },
+      session: {
+        access_token: 'demo-token',
+        refresh_token: 'demo-refresh-token',
+        expires_at: Date.now() + 3600000, // 1 hour
+      },
+    };
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -55,6 +77,33 @@ export const signOut = async () => {
 };
 
 export const getCurrentUser = async () => {
+  // Check for demo session in localStorage
+  const demoSession = localStorage.getItem('demo-session');
+  if (demoSession) {
+    try {
+      const sessionData = JSON.parse(demoSession);
+      if (sessionData.expires_at > Date.now()) {
+        return {
+          id: sessionData.user.id,
+          email: sessionData.user.email,
+          name: sessionData.user.user_metadata.name,
+          role: sessionData.user.user_metadata.role,
+          grade_level: sessionData.user.user_metadata.grade_level,
+          created_at: sessionData.user.created_at,
+          preferences: {
+            language: 'en',
+            theme: 'light' as 'light' | 'dark',
+            difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced'
+          }
+        };
+      } else {
+        localStorage.removeItem('demo-session');
+      }
+    } catch (error) {
+      localStorage.removeItem('demo-session');
+    }
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return null;

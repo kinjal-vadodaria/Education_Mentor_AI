@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, signIn, signUp, signOut, getCurrentUser, createUserProfile } from '../services/supabase';
+import { supabase, signIn, signOut, getCurrentUser } from '../services/supabase';
 import { errorReporting } from '../services/errorReporting';
 
 export interface User {
@@ -71,6 +71,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
+
+        // Check for demo session first
+        const demoSession = localStorage.getItem('demo-session');
+        if (demoSession) {
+          try {
+            const sessionData = JSON.parse(demoSession);
+            if (sessionData.expires_at > Date.now()) {
+              setUser({
+                id: sessionData.user.id,
+                email: sessionData.user.email || '',
+                name: sessionData.user.user_metadata.name,
+                role: sessionData.user.user_metadata.role,
+                grade_level: sessionData.user.user_metadata.grade_level,
+                created_at: sessionData.user.created_at || new Date().toISOString(),
+                preferences: {
+                  language: 'en',
+                  theme: 'light' as 'light' | 'dark',
+                  difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced'
+                }
+              });
+              setIsLoading(false);
+              return;
+            } else {
+              localStorage.removeItem('demo-session');
+            }
+          } catch (error) {
+            localStorage.removeItem('demo-session');
+          }
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           await refreshUser();
@@ -112,7 +142,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleSignIn = async (email: string, password: string) => {
     try {
       console.log('🔑 Attempting sign in for:', email);
-      await signIn(email, password);
+      const result = await signIn(email, password);
+
+      // Handle demo accounts
+      if ((email === 'student@demo.com' || email === 'teacher@demo.com') && password === 'demo123') {
+        localStorage.setItem('demo-session', JSON.stringify(result));
+        setUser({
+          id: result.user.id,
+          email: result.user.email || '',
+          name: result.user.user_metadata.name,
+          role: result.user.user_metadata.role,
+          grade_level: result.user.user_metadata.grade_level,
+          created_at: result.user.created_at || new Date().toISOString(),
+          preferences: {
+            language: 'en',
+            theme: 'light' as 'light' | 'dark',
+            difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced'
+          }
+        });
+        setIsLoading(false);
+        navigate(result.user.user_metadata.role === 'student' ? '/student/dashboard' : '/teacher/dashboard', { replace: true });
+        return;
+      }
+
       // Don't call refreshUser here - let the auth state change handler do it
     } catch (error) {
       errorReporting.reportError(error, { context: 'SIGN_IN' });
@@ -153,6 +205,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleSignOut = async () => {
     try {
       await signOut();
+      localStorage.removeItem('demo-session');
       setUser(null);
     } catch (error) {
       errorReporting.reportError(error, { context: 'SIGN_OUT' });

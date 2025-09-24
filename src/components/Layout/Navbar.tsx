@@ -5,17 +5,17 @@ import { useDisclosure } from '@mantine/hooks';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { AuthProvider, useAuth } from '../../contexts/AuthContext';
-import { LoginForm } from '../../Auth/LoginForm';
+import { LoginForm } from '../Auth/LoginForm';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { StudentDashboard } from '../../Student/Dashboard';
-import { AITutor } from '../../Student/AITutor';
-import { QuizInterface } from '../../Student/QuizInterface';
-import { ProgressTracker } from '../../Student/ProgressTracker';
-import { TeacherDashboard } from '../../Teacher/Dashboard';
-import { LessonPlanner } from '../../Teacher/LessonPlanner';
-import { Analytics } from '../../Teacher/Analytics';
-import { StudentManagement } from '../../Teacher/StudentManagement';
+import { StudentDashboard } from '../Student/Dashboard';
+import { AITutor } from '../Student/AITutor';
+import { QuizInterface } from '../Student/QuizInterface';
+import { ProgressTracker } from '../Student/ProgressTracker';
+import { TeacherDashboard } from '../Teacher/Dashboard';
+import { LessonPlanner } from '../Teacher/LessonPlanner';
+import { Analytics } from '../Teacher/Analytics';
+import { StudentManagement } from '../Teacher/StudentManagement';
 import { Settings } from '../common/Settings';
 
 const AppContent: React.FC = () => {
@@ -97,7 +97,7 @@ const AppContent: React.FC = () => {
 
       <AppShell.Navbar p="md">
         <ErrorBoundary>
-          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <Sidebar onTabChange={setActiveTab} />
         </ErrorBoundary>
       </AppShell.Navbar>
 

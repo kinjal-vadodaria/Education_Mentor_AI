@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import {
   Container,
@@ -19,6 +19,9 @@ import {
   Progress,
   ActionIcon,
   Modal,
+  Center,
+  NumberInput,
+  PasswordInput,
 } from '@mantine/core';
 import {
   IconUsers,
@@ -60,29 +63,10 @@ export const StudentManagement: React.FC = (): JSX.Element => {
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [_isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
-
-  // Check if user is teacher
-  if (user?.role !== 'teacher') {
-    return (
-      <Container size="sm">
-        <Center style={{ height: '60vh' }}>
-          <Stack align="center">
-            <ThemeIcon size={80} color="red" variant="light">
-              <IconX size={40} />
-            </ThemeIcon>
-            <Title order={3}>Access Denied</Title>
-            <Text c="dimmed" ta="center">
-              This section is only available to teachers.
-            </Text>
-          </Stack>
-        </Center>
-      </Container>
-    );
-  }
 
   const addStudentForm = useForm({
     initialValues: {
@@ -173,6 +157,25 @@ export const StudentManagement: React.FC = (): JSX.Element => {
     loadStudents();
   }, []);
 
+  // Check if user is teacher
+  if (user?.role !== 'teacher') {
+    return (
+      <Container size="sm">
+        <Center style={{ height: '60vh' }}>
+          <Stack align="center">
+            <ThemeIcon size={80} color="red" variant="light">
+              <IconX size={40} />
+            </ThemeIcon>
+            <Title order={3}>Access Denied</Title>
+            <Text c="dimmed" ta="center">
+              This section is only available to teachers.
+            </Text>
+          </Stack>
+        </Center>
+      </Container>
+    );
+  }
+
   const loadStudents = async () => {
     try {
       setIsLoading(true);
@@ -210,7 +213,7 @@ export const StudentManagement: React.FC = (): JSX.Element => {
   const handleAddStudent = async (values: typeof addStudentForm.values) => {
     setIsSubmitting(true);
     try {
-      const { data, error } = await createStudent({
+      const { error } = await createStudent({
         name: values.name,
         email: values.email,
         grade_level: values.grade_level,
@@ -242,7 +245,7 @@ export const StudentManagement: React.FC = (): JSX.Element => {
     }
   };
 
-  const handleEditStudent = (student: Student) => {
+  const handleEditStudent = (_student: Student) => {
     // In a real implementation, open edit modal
     notifications.show({
       title: 'Feature Coming Soon',
@@ -251,7 +254,7 @@ export const StudentManagement: React.FC = (): JSX.Element => {
     });
   };
 
-  const handleDeleteStudent = (studentId: number) => {
+  const handleDeleteStudent = (_studentId: number) => {
     // In a real implementation, delete student
     notifications.show({
       title: 'Feature Coming Soon',
@@ -491,8 +494,10 @@ export const StudentManagement: React.FC = (): JSX.Element => {
                         <ActionIcon
                           variant="subtle"
                           color="blue"
-                          onClick={() => handleEditStudent(student)}
-                          onClick={() => setSelectedStudent(student)}
+                          onClick={() => {
+                            handleEditStudent(student);
+                            setSelectedStudent(student);
+                          }}
                         >
                           <IconEye size={16} />
                         </ActionIcon>

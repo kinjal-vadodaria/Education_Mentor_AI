@@ -10,7 +10,6 @@ import {
   Switch,
   Select,
   Button,
-  Divider,
   Card,
   Grid,
   ThemeIcon,
@@ -68,11 +67,6 @@ export const Settings: React.FC = () => {
     },
   });
 
-  // Early return if user is not available
-  if (!user) {
-    return <div>Loading...</div>;
-  }
-
   const passwordForm = useForm({
     initialValues: {
       currentPassword: '',
@@ -85,6 +79,11 @@ export const Settings: React.FC = () => {
         value !== values.newPassword ? 'Passwords do not match' : null,
     },
   });
+
+  // Early return if user is not available
+  if (!user) {
+    return <div>Loading...</div>;
+  }
 
   const handleLanguageChange = (value: string | null) => {
     if (value && user) {

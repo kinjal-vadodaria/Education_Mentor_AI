@@ -17,11 +17,11 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
-  activeTab: string;
+  activeTab?: string;
   onTabChange: (tab: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onTabChange }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
