@@ -1,4 +1,4 @@
-/*
+ror /*
 # MentorQuest - Seed Data
 
 This file provides demo data for testing the application.
@@ -30,8 +30,7 @@ INSERT INTO public.users (id, email, name, role, grade_level, created_at) VALUES
 ) ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     name = EXCLUDED.name,
-    role = EXCLUDED.role,
-    updated_at = NOW();
+    role = EXCLUDED.role;
 
 INSERT INTO public.users (id, email, name, role, grade_level, created_at) VALUES
 (
@@ -45,8 +44,7 @@ INSERT INTO public.users (id, email, name, role, grade_level, created_at) VALUES
     email = EXCLUDED.email,
     name = EXCLUDED.name,
     role = EXCLUDED.role,
-    grade_level = EXCLUDED.grade_level,
-    updated_at = NOW();
+    grade_level = EXCLUDED.grade_level;
 
 -- ============================================================================
 -- DEMO COURSES (Created by demo teacher)
@@ -139,14 +137,12 @@ INSERT INTO public.lesson_plans (
 -- ============================================================================
 
 INSERT INTO public.student_progress (
-    user_id, 
-    subject, 
-    xp_points, 
-    current_streak, 
-    level, 
-    badges,
-    total_quizzes,
-    total_correct_answers
+    user_id,
+    subject,
+    xp_points,
+    current_streak,
+    level,
+    badges
 ) VALUES
 (
     '22222222-2222-2222-2222-222222222222',
@@ -154,27 +150,20 @@ INSERT INTO public.student_progress (
     250,
     7,
     'intermediate',
-    ARRAY['Quiz Master', 'Week Warrior'],
-    5,
-    18
+    ARRAY['Quiz Master', 'Week Warrior']
 ) ON CONFLICT (user_id, subject) DO UPDATE SET
     xp_points = EXCLUDED.xp_points,
     current_streak = EXCLUDED.current_streak,
     level = EXCLUDED.level,
-    badges = EXCLUDED.badges,
-    total_quizzes = EXCLUDED.total_quizzes,
-    total_correct_answers = EXCLUDED.total_correct_answers,
-    updated_at = NOW();
+    badges = EXCLUDED.badges;
 
 INSERT INTO public.student_progress (
-    user_id, 
-    subject, 
-    xp_points, 
-    current_streak, 
-    level, 
-    badges,
-    total_quizzes,
-    total_correct_answers
+    user_id,
+    subject,
+    xp_points,
+    current_streak,
+    level,
+    badges
 ) VALUES
 (
     '22222222-2222-2222-2222-222222222222',
@@ -182,17 +171,12 @@ INSERT INTO public.student_progress (
     180,
     5,
     'intermediate',
-    ARRAY['Math Wizard'],
-    3,
-    12
+    ARRAY['Math Wizard']
 ) ON CONFLICT (user_id, subject) DO UPDATE SET
     xp_points = EXCLUDED.xp_points,
     current_streak = EXCLUDED.current_streak,
     level = EXCLUDED.level,
-    badges = EXCLUDED.badges,
-    total_quizzes = EXCLUDED.total_quizzes,
-    total_correct_answers = EXCLUDED.total_correct_answers,
-    updated_at = NOW();
+    badges = EXCLUDED.badges;
 
 -- ============================================================================
 -- DEMO QUIZ RESULTS
@@ -204,7 +188,6 @@ INSERT INTO public.quiz_results (
     score,
     total_questions,
     time_taken,
-    difficulty,
     completed_at
 ) VALUES
 (
@@ -213,7 +196,6 @@ INSERT INTO public.quiz_results (
     4,
     5,
     180,
-    'intermediate',
     NOW() - INTERVAL '2 days'
 ),
 (
@@ -222,7 +204,6 @@ INSERT INTO public.quiz_results (
     3,
     4,
     120,
-    'beginner',
     NOW() - INTERVAL '1 day'
 ),
 (
@@ -231,7 +212,6 @@ INSERT INTO public.quiz_results (
     5,
     5,
     200,
-    'intermediate',
     NOW() - INTERVAL '3 hours'
 ) ON CONFLICT DO NOTHING;
 

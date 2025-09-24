@@ -50,64 +50,27 @@ export const signOut = async () => {
 
 export const getCurrentUser = async () => {
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) return null;
 
-  console.log('🔍 Fetching user profile for:', user.id);
+  // Use auth.users metadata to avoid RLS issues
+  const role = user.user_metadata?.role || 'student';
+  const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
 
-  // Get user profile from users table
-  const { data: userProfile, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  console.log('📊 User profile query result:', { userProfile, userError });
-  if (userProfile) {
-    console.log('✅ Found existing user profile:', userProfile);
-    return userProfile;
-  }
-
-  // If user doesn't exist in users table, create profile
-  if (!userProfile && !userError) {
-    console.log('🆕 Creating new user profile from auth metadata:', user.user_metadata);
-    try {
-      const { data: newProfile, error: createError } = await supabase
-        .from('users')
-        .insert([
-          {
-            id: user.id,
-            email: user.email || '',
-            name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            role: user.user_metadata?.role || 'student',
-            grade_level: user.user_metadata?.grade_level || null,
-          },
-        ])
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('❌ Failed to create user profile:', createError);
-        errorReporting.reportError(createError, { context: 'CREATE_USER_PROFILE_AUTO' });
-        return null;
-      }
-
-      console.log('✅ Created new user profile:', newProfile);
-      return newProfile;
-    } catch (error) {
-      console.error('❌ Error in auto-create profile:', error);
-      errorReporting.reportError(error, { context: 'AUTO_CREATE_PROFILE' });
-      return null;
+  // Return user data from auth.users to avoid database queries
+  return {
+    id: user.id,
+    email: user.email || '',
+    name: name,
+    role: role,
+    grade_level: user.user_metadata?.grade_level || undefined,
+    created_at: user.created_at,
+    preferences: {
+      language: 'en',
+      theme: 'light',
+      difficulty: 'intermediate'
     }
-  }
-
-  if (userError) {
-    console.error('❌ Error fetching user profile:', userError);
-    errorReporting.reportError(userError, { context: 'GET_CURRENT_USER' });
-    return null;
-  }
-
-  return null;
+  };
 };
 
 export const createUserProfile = async (userId: string, profileData: {
