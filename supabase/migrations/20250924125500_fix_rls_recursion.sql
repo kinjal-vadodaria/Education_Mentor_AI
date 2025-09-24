@@ -1,4 +1,4 @@
-e/*
+/*
 # MentorQuest - Fix RLS Recursion Issue
 
 This migration fixes the infinite recursion in RLS policies for the users table.

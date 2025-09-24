@@ -29,16 +29,17 @@ import {
   IconBook,
   IconDownload,
   IconShare,
-  IconEdit,
   IconPlus,
   IconWand,
   IconCheck,
-
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 
 import { aiService, LessonPlan } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
+
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export const LessonPlanner: React.FC = () => {
   const { t } = useTranslation();
@@ -144,6 +145,66 @@ export const LessonPlanner: React.FC = () => {
 
   const allPlans = [...lessonPlans, ...samplePlans];
 
+  const exportPDF = (plan: LessonPlan) => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text(plan.title, 14, 22);
+
+    doc.setFontSize(12);
+    doc.text(`Subject: ${plan.subject}`, 14, 32);
+    doc.text(`Grade: ${plan.grade}`, 14, 38);
+    doc.text(`Duration: ${plan.duration} minutes`, 14, 44);
+    doc.text(`Created: ${plan.createdAt.toLocaleDateString()}`, 14, 50);
+
+    doc.text('Learning Objectives:', 14, 60);
+    plan.objectives.forEach((obj, index) => {
+      doc.text(`${index + 1}. ${obj}`, 20, 66 + index * 6);
+    });
+
+    doc.text('Materials:', 14, 66 + plan.objectives.length * 6 + 6);
+    plan.materials.forEach((mat, index) => {
+      doc.text(`- ${mat}`, 20, 72 + plan.objectives.length * 6 + index * 6);
+    });
+
+    doc.text('Activities:', 14, 78 + plan.objectives.length * 6 + plan.materials.length * 6);
+    plan.activities.forEach((act, index) => {
+      doc.text(
+        `${index + 1}. ${act.name} (${act.duration} min) - ${act.type}`,
+        20,
+        84 + plan.objectives.length * 6 + plan.materials.length * 6 + index * 6
+      );
+      doc.text(`   ${act.description}`, 25, 90 + plan.objectives.length * 6 + plan.materials.length * 6 + index * 6);
+    });
+
+    doc.text('Assessment:', 14, 96 + plan.objectives.length * 6 + plan.materials.length * 6 + plan.activities.length * 6);
+    doc.text(plan.assessment, 20, 102 + plan.objectives.length * 6 + plan.materials.length * 6 + plan.activities.length * 6);
+
+    doc.save(`${plan.title}.pdf`);
+  };
+
+  const sharePlan = (plan: LessonPlan) => {
+    if (navigator.share) {
+      navigator.share({
+        title: plan.title,
+        text: `Check out this lesson plan on ${plan.subject} for grade ${plan.grade}.`,
+        url: window.location.href,
+      }).catch(() => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to share the lesson plan.',
+          color: 'red',
+        });
+      });
+    } else {
+      notifications.show({
+        title: 'Not Supported',
+        message: 'Sharing is not supported on this browser.',
+        color: 'yellow',
+      });
+    }
+  };
+
   if (selectedPlan) {
     return (
       <Container size="lg">
@@ -158,13 +219,10 @@ export const LessonPlanner: React.FC = () => {
           </Button>
           
           <Group>
-            <Button variant="outline" leftSection={<IconEdit size={16} />}>
-              Edit
-            </Button>
-            <Button variant="outline" leftSection={<IconShare size={16} />}>
+            <Button variant="outline" leftSection={<IconShare size={16} />} onClick={() => sharePlan(selectedPlan)}>
               Share
             </Button>
-            <Button leftSection={<IconDownload size={16} />}>
+            <Button leftSection={<IconDownload size={16} />} onClick={() => exportPDF(selectedPlan)}>
               Export PDF
             </Button>
           </Group>
@@ -331,6 +389,7 @@ export const LessonPlanner: React.FC = () => {
             leftSection={<IconPlus size={16} />}
             variant="gradient"
             gradient={{ from: 'blue', to: 'cyan' }}
+            type="button"
           >
             {t('lessonPlanner.createNew')}
           </Button>

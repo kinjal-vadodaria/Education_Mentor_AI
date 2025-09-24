@@ -62,6 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (error) {
+      console.error('Error in refreshUser:', error);
       errorReporting.reportError(error, { context: 'REFRESH_USER' });
       setUser(null);
     }
@@ -101,13 +102,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await refreshUser();
-        } else {
+        // Add timeout to prevent hanging on getSession
+        const getSessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        );
+
+        try {
+          const { data: { session } } = await Promise.race([getSessionPromise, timeoutPromise]);
+          if (session?.user) {
+            await refreshUser();
+          } else {
+            setUser(null);
+          }
+        } catch (sessionError: unknown) {
+          // If session check fails due to invalid tokens, clear them and proceed
+          if (sessionError.message?.includes('Invalid Refresh Token') ||
+              sessionError.message?.includes('Refresh Token Not Found')) {
+            console.log('🧹 Clearing invalid session tokens');
+            localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token');
+            // Also clear any other Supabase related localStorage
+            Object.keys(localStorage).forEach(key => {
+              if (key.startsWith('sb-') && key.includes('auth')) {
+                localStorage.removeItem(key);
+              }
+            });
+          }
           setUser(null);
         }
       } catch (error) {
+        console.error('Auth initialization error:', error);
         errorReporting.reportError(error, { context: 'INITIALIZE_AUTH' });
         setUser(null);
       } finally {

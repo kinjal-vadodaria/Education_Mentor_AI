@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -29,17 +30,21 @@ import { useAuth } from '../../contexts/AuthContext';
 export const TeacherDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'lesson-planner':
-        window.location.href = '/teacher/lesson-planner';
+        navigate('/teacher/lesson-planner');
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'lesson-planner' }));
         break;
       case 'analytics':
-        window.location.href = '/teacher/analytics';
+        navigate('/teacher/analytics');
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'analytics' }));
         break;
       case 'students':
-        window.location.href = '/teacher/students';
+        navigate('/teacher/students');
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'students' }));
         break;
       default:
         break;

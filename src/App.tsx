@@ -99,7 +99,7 @@ const AppContent: React.FC = () => {
 
       <AppShell.Navbar p="md">
         <ErrorBoundary>
-          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <Sidebar onTabChange={setActiveTab} />
         </ErrorBoundary>
       </AppShell.Navbar>
 

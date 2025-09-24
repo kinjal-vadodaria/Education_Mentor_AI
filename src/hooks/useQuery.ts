@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../services/supabase';
+import {
+  getStudentProgress,
+  getQuizResults,
+  updateStudentProgress,
+  saveQuizResult
+} from '../services/supabase';
 import { errorReporting } from '../services/errorReporting';
 
 // Custom hooks for data fetching with React Query
@@ -7,16 +12,13 @@ export const useStudentProgress = (userId: string) => {
   return useQuery({
     queryKey: ['student-progress', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('student_progress')
-        .select('*')
-        .eq('user_id', userId);
-      
+      const { data, error } = await getStudentProgress(userId);
+
       if (error) {
         errorReporting.reportError(error, { context: 'FETCH_STUDENT_PROGRESS' });
         throw error;
       }
-      
+
       return data;
     },
     enabled: !!userId,
@@ -28,17 +30,13 @@ export const useQuizResults = (userId: string) => {
   return useQuery({
     queryKey: ['quiz-results', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('quiz_results')
-        .select('*')
-        .eq('user_id', userId)
-        .order('completed_at', { ascending: false });
-      
+      const { data, error } = await getQuizResults(userId);
+
       if (error) {
         errorReporting.reportError(error, { context: 'FETCH_QUIZ_RESULTS' });
         throw error;
       }
-      
+
       return data;
     },
     enabled: !!userId,
@@ -48,7 +46,7 @@ export const useQuizResults = (userId: string) => {
 
 export const useUpdateStudentProgress = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ userId, subject, updates }: {
       userId: string;
@@ -60,17 +58,7 @@ export const useUpdateStudentProgress = () => {
         badges?: string[];
       };
     }) => {
-      const { data, error } = await supabase
-        .from('student_progress')
-        .upsert([
-          {
-            user_id: userId,
-            subject,
-            ...updates,
-          },
-        ])
-        .select()
-        .single();
+      const { data, error } = await updateStudentProgress(userId, subject, updates);
 
       if (error) {
         errorReporting.reportError(error, { context: 'UPDATE_STUDENT_PROGRESS' });
@@ -88,7 +76,7 @@ export const useUpdateStudentProgress = () => {
 
 export const useSaveQuizResult = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ userId, quizData }: {
       userId: string;
@@ -99,16 +87,7 @@ export const useSaveQuizResult = () => {
         time_taken?: number;
       };
     }) => {
-      const { data, error } = await supabase
-        .from('quiz_results')
-        .insert([
-          {
-            user_id: userId,
-            ...quizData,
-          },
-        ])
-        .select()
-        .single();
+      const { data, error } = await saveQuizResult(userId, quizData);
 
       if (error) {
         errorReporting.reportError(error, { context: 'SAVE_QUIZ_RESULT' });

@@ -17,7 +17,6 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
-  activeTab?: string;
   onTabChange: (tab: string) => void;
 }
 

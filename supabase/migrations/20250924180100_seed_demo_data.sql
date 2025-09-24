@@ -1,55 +1,12 @@
-/*
-# MentorQuest - Seed Data
-
-This file provides demo data for testing the application.
-Run this after the schema migration is complete.
-
-## Demo Users:
-- Teacher: teacher@demo.com / demo123
-- Student: student@demo.com / demo123
-
-## Demo Data:
-- Sample courses and lesson plans
-- Student progress and quiz results
-- Chat message history
-*/
-
 -- ============================================================================
--- DEMO USERS (These will be created via auth, but we ensure they exist in users table)
+-- DEMO DATA FOR ALL TABLES
 -- ============================================================================
 
--- Insert demo users (these IDs should match auth.users after signup)
-INSERT INTO public.users (id, email, name, role, grade_level, created_at) VALUES
-(
-    '11111111-1111-1111-1111-111111111111',
-    'teacher@demo.com',
-    'Demo Teacher',
-    'teacher',
-    NULL,
-    NOW()
-) ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    name = EXCLUDED.name,
-    role = EXCLUDED.role;
+-- Insert demo users (skip if trigger issues)
+-- Note: These inserts may fail if updated_at column issues persist
+-- The users will be created via auth triggers instead
 
-INSERT INTO public.users (id, email, name, role, grade_level, created_at) VALUES
-(
-    '22222222-2222-2222-2222-222222222222',
-    'student@demo.com',
-    'Demo Student',
-    'student',
-    10,
-    NOW()
-) ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    name = EXCLUDED.name,
-    role = EXCLUDED.role,
-    grade_level = EXCLUDED.grade_level;
-
--- ============================================================================
--- DEMO COURSES (Created by demo teacher)
--- ============================================================================
-
+-- Insert demo courses
 INSERT INTO public.courses (id, teacher_id, title, description, subject, grade_level, is_active) VALUES
 (
     '33333333-3333-3333-3333-333333333333',
@@ -72,21 +29,18 @@ INSERT INTO public.courses (id, teacher_id, title, description, subject, grade_l
     true
 ) ON CONFLICT (id) DO NOTHING;
 
--- ============================================================================
--- DEMO LESSON PLANS
--- ============================================================================
-
+-- Insert demo lesson plans
 INSERT INTO public.lesson_plans (
-    id, 
-    teacher_id, 
-    course_id, 
-    title, 
-    subject, 
-    grade_level, 
-    duration, 
-    objectives, 
-    materials, 
-    activities, 
+    id,
+    teacher_id,
+    course_id,
+    title,
+    subject,
+    grade_level,
+    duration,
+    objectives,
+    materials,
+    activities,
     assessment
 ) VALUES
 (
@@ -108,7 +62,7 @@ INSERT INTO public.lesson_plans (
             "type": "presentation"
         },
         {
-            "id": "2", 
+            "id": "2",
             "name": "Concept Explanation",
             "description": "Explain each law with examples",
             "duration": 20,
@@ -116,7 +70,7 @@ INSERT INTO public.lesson_plans (
         },
         {
             "id": "3",
-            "name": "Hands-on Activity", 
+            "name": "Hands-on Activity",
             "description": "Students experiment with objects",
             "duration": 10,
             "type": "hands-on"
@@ -132,10 +86,61 @@ INSERT INTO public.lesson_plans (
     'Exit ticket with 3 questions about Newton''s laws'
 ) ON CONFLICT (id) DO NOTHING;
 
--- ============================================================================
--- DEMO STUDENT PROGRESS
--- ============================================================================
+-- Insert demo library items
+INSERT INTO public.library_items (
+    id,
+    title,
+    description,
+    category,
+    subject,
+    grade_level,
+    difficulty,
+    tags,
+    is_public,
+    author_id,
+    file_type
+) VALUES
+(
+    '77777777-7777-7777-7777-777777777777',
+    'Introduction to Physics',
+    'Basic concepts of physics including motion, forces, and energy',
+    'Textbook',
+    'Physics',
+    10,
+    'beginner',
+    ARRAY['physics', 'motion', 'forces'],
+    true,
+    '11111111-1111-1111-1111-111111111111',
+    'pdf'
+),
+(
+    '88888888-8888-8888-8888-888888888888',
+    'Algebra Fundamentals',
+    'Essential algebra concepts for high school students',
+    'Worksheet',
+    'Mathematics',
+    9,
+    'intermediate',
+    ARRAY['algebra', 'equations', 'variables'],
+    true,
+    '11111111-1111-1111-1111-111111111111',
+    'doc'
+),
+(
+    '99999999-9999-9999-9999-999999999999',
+    'Photosynthesis Explained',
+    'A comprehensive video explaining the process of photosynthesis',
+    'Video',
+    'Biology',
+    8,
+    'beginner',
+    ARRAY['biology', 'photosynthesis', 'plants'],
+    true,
+    '11111111-1111-1111-1111-111111111111',
+    'video'
+) ON CONFLICT (id) DO NOTHING;
 
+-- Insert demo student progress
 INSERT INTO public.student_progress (
     user_id,
     subject,
@@ -178,10 +183,7 @@ INSERT INTO public.student_progress (
     level = EXCLUDED.level,
     badges = EXCLUDED.badges;
 
--- ============================================================================
--- DEMO QUIZ RESULTS
--- ============================================================================
-
+-- Insert demo quiz results
 INSERT INTO public.quiz_results (
     user_id,
     quiz_topic,
@@ -215,10 +217,7 @@ INSERT INTO public.quiz_results (
     NOW() - INTERVAL '3 hours'
 ) ON CONFLICT DO NOTHING;
 
--- ============================================================================
--- DEMO CHAT MESSAGES
--- ============================================================================
-
+-- Insert demo chat messages
 INSERT INTO public.chat_messages (
     user_id,
     session_id,
