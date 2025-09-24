@@ -1,142 +1,132 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AppShell, Container, LoadingOverlay } from '@mantine/core';
-import { useDisclosure, useColorScheme } from '@mantine/hooks';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/Auth/LoginForm';
-import { Header } from './components/Layout/Header';
-import { Navbar } from './components/Layout/Navbar';
-import { StudentDashboard } from './components/Student/Dashboard';
-import { AITutor } from './components/Student/AITutor';
-import { QuizInterface } from './components/Student/QuizInterface';
-import { ProgressTracker } from './components/Student/ProgressTracker';
-import { TeacherDashboard } from './components/Teacher/Dashboard';
-import { LessonPlanner } from './components/Teacher/LessonPlanner';
-import { Analytics } from './components/Teacher/Analytics';
-import { StudentManagement } from './components/Teacher/StudentManagement';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase, signIn, signUp, signOut, getCurrentUser, createUserProfile } from '../services/supabase';
+import { errorReporting } from '../services/errorReporting';
 
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-  const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'student' | 'teacher';
+  grade_level?: number;
+  created_at: string;
+  preferences?: {
+    language?: string;
+    theme?: 'light' | 'dark';
+    difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  };
+}
 
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, role: 'student' | 'teacher', gradeLevel?: number) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
 
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
+  return context;
+};
 
-  if (!user) {
-    return <LoginForm />;
-  }
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-  const renderContent = () => {
-    if (user.role === 'student') {
-      switch (activeTab) {
-        case 'dashboard':
-          return <StudentDashboard />;
-        case 'ai-tutor':
-          return <AITutor />;
-        case 'quizzes':
-          return <QuizInterface />;
-        case 'progress':
-          return <ProgressTracker />;
-        case 'library':
-          return <Container>Library coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <StudentDashboard />;
-      }
-    } else {
-      switch (activeTab) {
-        case 'dashboard':
-          return <TeacherDashboard />;
-        case 'lesson-planner':
-          return <LessonPlanner />;
-        case 'analytics':
-          return <Analytics />;
-        case 'students':
-          return <StudentManagement />;
-        case 'resources':
-          return <Container>Resources coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <TeacherDashboard />;
-      }
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refreshUser = async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'REFRESH_USER' });
+      setUser(null);
     }
   };
 
-  return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened },
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <Header opened={opened} toggle={toggle} />
-      </AppShell.Header>
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await refreshUser();
+        }
+      } catch (error) {
+        errorReporting.reportError(error, { context: 'INITIALIZE_AUTH' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-      <AppShell.Navbar p="md">
-        <ErrorBoundary>
-          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-        </ErrorBoundary>
-      </AppShell.Navbar>
+    initializeAuth();
 
-      <AppShell.Main>
-        <Container size="xl" px="md">
-          <ErrorBoundary>
-            {renderContent()}
-          </ErrorBoundary>
-        </Container>
-      </AppShell.Main>
-    </AppShell>
-  );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await refreshUser();
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignIn = async (email: string, password: string) => {
+    try {
+      await signIn(email, password);
+      await refreshUser();
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'SIGN_IN' });
+      throw error;
+    }
+  };
+
+  const handleSignUp = async (email: string, password: string, name: string, role: 'student' | 'teacher', gradeLevel?: number) => {
+    try {
+      const { user: authUser } = await signUp(email, password);
+      if (authUser) {
+        await createUserProfile(authUser.id, {
+          email,
+          name,
+          role,
+          grade_level: gradeLevel,
+        });
+        await refreshUser();
+      }
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'SIGN_UP' });
+      throw error;
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setUser(null);
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'SIGN_OUT' });
+      throw error;
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    isLoading,
+    signIn: handleSignIn,
+    signUp: handleSignUp,
+    signOut: handleSignOut,
+    refreshUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-}
-
-export default App;

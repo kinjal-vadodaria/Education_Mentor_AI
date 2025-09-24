@@ -1,142 +1,464 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AppShell, Container, LoadingOverlay } from '@mantine/core';
-import { useDisclosure, useColorScheme } from '@mantine/hooks';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/Auth/LoginForm';
-import { Header } from './components/Layout/Header';
-import { Navbar } from './components/Layout/Navbar';
-import { StudentDashboard } from './components/Student/Dashboard';
-import { AITutor } from './components/Student/AITutor';
-import { QuizInterface } from './components/Student/QuizInterface';
-import { ProgressTracker } from './components/Student/ProgressTracker';
-import { TeacherDashboard } from './components/Teacher/Dashboard';
-import { LessonPlanner } from './components/Teacher/LessonPlanner';
-import { Analytics } from './components/Teacher/Analytics';
-import { StudentManagement } from './components/Teacher/StudentManagement';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { errorReporting } from './errorReporting';
+import { saveChatMessage, saveQuizResult } from './supabase';
 
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-  const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
+const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY;
 
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  if (!user) {
-    return <LoginForm />;
-  }
-
-  const renderContent = () => {
-    if (user.role === 'student') {
-      switch (activeTab) {
-        case 'dashboard':
-          return <StudentDashboard />;
-        case 'ai-tutor':
-          return <AITutor />;
-        case 'quizzes':
-          return <QuizInterface />;
-        case 'progress':
-          return <ProgressTracker />;
-        case 'library':
-          return <Container>Library coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <StudentDashboard />;
-      }
-    } else {
-      switch (activeTab) {
-        case 'dashboard':
-          return <TeacherDashboard />;
-        case 'lesson-planner':
-          return <LessonPlanner />;
-        case 'analytics':
-          return <Analytics />;
-        case 'students':
-          return <StudentManagement />;
-        case 'resources':
-          return <Container>Resources coming soon...</Container>;
-        case 'settings':
-    } catch (error) {
-        default:
-          return <TeacherDashboard />;
-      }
-    }
-  };
-
-  return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened },
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <Header opened={opened} toggle={toggle} />
-      </AppShell.Header>
-
-      <AppShell.Navbar p="md">
-        <ErrorBoundary>
-          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-        </ErrorBoundary>
-      </AppShell.Navbar>
-
-      <AppShell.Main>
-        <Container size="xl" px="md">
-          <ErrorBoundary>
-            {renderContent()}
-          </ErrorBoundary>
-        </Container>
-      </AppShell.Main>
-    </AppShell>
-  );
-};
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
+if (!API_KEY) {
+  console.warn('Google AI API key not found. AI features will use fallback responses.');
 }
 
-export default App;
+const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
+
+// Rate limiting
+const requestCache = new Map<string, { response: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const RATE_LIMIT = 10; // requests per minute
+const rateLimitTracker = new Map<string, number[]>();
+
+export interface Quiz {
+  id: string;
+  title: string;
+  topic: string;
+  difficulty: string;
+  questions: QuizQuestion[];
+  timeLimit?: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  type: 'multiple-choice' | 'true-false' | 'short-answer';
+  options?: string[];
+  correctAnswer: string;
+  explanation?: string;
+}
+
+export interface LessonPlan {
+  id: string;
+  title: string;
+  subject: string;
+  grade: string;
+  duration: number;
+  objectives: string[];
+  materials: string[];
+  activities: LessonActivity[];
+  assessment: string;
+  createdAt: Date;
+}
+
+export interface LessonActivity {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  type: 'presentation' | 'hands-on' | 'discussion' | 'assessment';
+}
+
+class AIService {
+  private checkRateLimit(userId?: string): boolean {
+    const key = userId || 'anonymous';
+    const now = Date.now();
+    const requests = rateLimitTracker.get(key) || [];
+    
+    // Remove requests older than 1 minute
+    const recentRequests = requests.filter(time => now - time < 60000);
+    
+    if (recentRequests.length >= RATE_LIMIT) {
+      return false;
+    }
+    
+    recentRequests.push(now);
+    rateLimitTracker.set(key, recentRequests);
+    return true;
+  }
+
+  private getCachedResponse(cacheKey: string): any | null {
+    const cached = requestCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.response;
+    }
+    return null;
+  }
+
+  private setCachedResponse(cacheKey: string, response: any): void {
+    requestCache.set(cacheKey, { response, timestamp: Date.now() });
+  }
+
+  async generateExplanation(
+    topic: string,
+    difficulty: string = 'intermediate',
+    language: string = 'en',
+    gradeLevel?: number,
+    userId?: string,
+    sessionId?: string
+  ): Promise<{ content: string }> {
+    const cacheKey = `explanation:${topic}:${difficulty}:${language}:${gradeLevel}`;
+    const cached = this.getCachedResponse(cacheKey);
+    if (cached) return cached;
+
+    if (!this.checkRateLimit(userId)) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+
+    try {
+      if (!genAI) {
+        throw new Error('AI service not available');
+      }
+
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      
+      const prompt = `Explain "${topic}" in ${language} for a ${difficulty} level student${gradeLevel ? ` in grade ${gradeLevel}` : ''}. 
+      Make it engaging, clear, and educational. Use examples and analogies where appropriate.
+      Keep the explanation concise but comprehensive.`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const content = response.text();
+
+      const aiResponse = { content };
+      this.setCachedResponse(cacheKey, aiResponse);
+
+      // Save to database if user is logged in
+      if (userId && sessionId) {
+        try {
+          await saveChatMessage(userId, {
+            message: topic,
+            response: content,
+            session_id: sessionId,
+          });
+        } catch (error) {
+          errorReporting.reportError(error, { context: 'SAVE_CHAT_MESSAGE' });
+        }
+      }
+
+      return aiResponse;
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'GENERATE_EXPLANATION' });
+      
+      // Provide fallback response
+      return {
+        content: this.getFallbackExplanation(topic, difficulty),
+      };
+    }
+  }
+
+  async generateQuiz(
+    topic: string,
+    difficulty: string = 'intermediate',
+    questionCount: number = 5,
+    userId?: string
+  ): Promise<Quiz> {
+    const cacheKey = `quiz:${topic}:${difficulty}:${questionCount}`;
+    const cached = this.getCachedResponse(cacheKey);
+    if (cached) return cached;
+
+    if (!this.checkRateLimit(userId)) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+
+    try {
+      if (!genAI) {
+        throw new Error('AI service not available');
+      }
+
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      
+      const prompt = `Create a ${difficulty} level quiz about "${topic}" with ${questionCount} multiple-choice questions.
+      Format as JSON with this structure:
+      {
+        "title": "Quiz title",
+        "questions": [
+          {
+            "question": "Question text",
+            "options": ["A", "B", "C", "D"],
+            "correctAnswer": "A",
+            "explanation": "Why this is correct"
+          }
+        ]
+      }`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const content = response.text();
+
+      // Parse JSON response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Invalid response format');
+      }
+
+      const quizData = JSON.parse(jsonMatch[0]);
+      
+      const quiz: Quiz = {
+        id: Date.now().toString(),
+        title: quizData.title || `${topic} Quiz`,
+        topic,
+        difficulty,
+        questions: quizData.questions.map((q: any, index: number) => ({
+          id: `q${index + 1}`,
+          question: q.question,
+          type: 'multiple-choice' as const,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+        })),
+        timeLimit: questionCount * 60, // 1 minute per question
+      };
+
+      this.setCachedResponse(cacheKey, quiz);
+      return quiz;
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'GENERATE_QUIZ' });
+      
+      // Provide fallback quiz
+      return this.getFallbackQuiz(topic, difficulty, questionCount);
+    }
+  }
+
+  async gradeQuiz(
+    quiz: Quiz,
+    answers: Record<string, string>,
+    userId?: string
+  ): Promise<{
+    score: number;
+    totalPoints: number;
+    feedback: string[];
+    suggestions: string[];
+    xpGained: number;
+  }> {
+    let score = 0;
+    const feedback: string[] = [];
+    const totalPoints = quiz.questions.length;
+
+    quiz.questions.forEach((question) => {
+      const userAnswer = answers[question.id];
+      const isCorrect = userAnswer === question.correctAnswer;
+      
+      if (isCorrect) {
+        score++;
+        feedback.push(`✓ Question ${question.id}: Correct! ${question.explanation || ''}`);
+      } else {
+        feedback.push(`✗ Question ${question.id}: Incorrect. The correct answer was ${question.correctAnswer}. ${question.explanation || ''}`);
+      }
+    });
+
+    const percentage = (score / totalPoints) * 100;
+    const xpGained = score * 10 + (percentage >= 90 ? 50 : percentage >= 70 ? 25 : 0);
+
+    const suggestions = [
+      percentage >= 90 ? 'Excellent work! Try a more advanced topic.' : 
+      percentage >= 70 ? 'Good job! Review the missed questions and try again.' :
+      'Keep practicing! Focus on the fundamentals.',
+    ];
+
+    // Save quiz result if user is logged in
+    if (userId) {
+      try {
+        await saveQuizResult(userId, {
+          quiz_topic: quiz.topic,
+          score,
+          total_questions: totalPoints,
+        });
+      } catch (error) {
+        errorReporting.reportError(error, { context: 'SAVE_QUIZ_RESULT' });
+      }
+    }
+
+    return {
+      score,
+      totalPoints,
+      feedback,
+      suggestions,
+      xpGained,
+    };
+  }
+
+  async generateLessonPlan(
+    topic: string,
+    grade: string,
+    duration: number,
+    subject: string
+  ): Promise<LessonPlan> {
+    const cacheKey = `lesson:${topic}:${grade}:${duration}:${subject}`;
+    const cached = this.getCachedResponse(cacheKey);
+    if (cached) return cached;
+
+    if (!this.checkRateLimit()) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+
+    try {
+      if (!genAI) {
+        throw new Error('AI service not available');
+      }
+
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      
+      const prompt = `Create a comprehensive lesson plan for "${topic}" in ${subject} for grade ${grade} students.
+      Duration: ${duration} minutes.
+      
+      Include:
+      - Learning objectives (3-5)
+      - Required materials
+      - Detailed activities with time allocations
+      - Assessment strategy
+      
+      Format as JSON with this structure:
+      {
+        "title": "Lesson title",
+        "objectives": ["objective1", "objective2"],
+        "materials": ["material1", "material2"],
+        "activities": [
+          {
+            "name": "Activity name",
+            "description": "Description",
+            "duration": 15,
+            "type": "presentation"
+          }
+        ],
+        "assessment": "Assessment description"
+      }`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const content = response.text();
+
+      // Parse JSON response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Invalid response format');
+      }
+
+      const planData = JSON.parse(jsonMatch[0]);
+      
+      const lessonPlan: LessonPlan = {
+        id: Date.now().toString(),
+        title: planData.title || `${topic} - Grade ${grade}`,
+        subject,
+        grade,
+        duration,
+        objectives: planData.objectives || [],
+        materials: planData.materials || [],
+        activities: planData.activities.map((activity: any, index: number) => ({
+          id: `activity${index + 1}`,
+          name: activity.name,
+          description: activity.description,
+          duration: activity.duration,
+          type: activity.type || 'presentation',
+        })),
+        assessment: planData.assessment || 'Formative assessment through observation and questioning',
+        createdAt: new Date(),
+      };
+
+      this.setCachedResponse(cacheKey, lessonPlan);
+      return lessonPlan;
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'GENERATE_LESSON_PLAN' });
+      
+      // Provide fallback lesson plan
+      return this.getFallbackLessonPlan(topic, grade, duration, subject);
+    }
+  }
+
+  private getFallbackExplanation(topic: string, difficulty: string): string {
+    const explanations: Record<string, Record<string, string>> = {
+      "newton": {
+        beginner: "Newton's Laws are like rules for how things move! The first law says things at rest stay at rest, and things moving keep moving unless something stops them. The second law says the harder you push something, the faster it goes. The third law says for every action, there's an equal and opposite reaction - like when you walk, you push back on the ground and it pushes you forward!",
+        intermediate: "Newton's Three Laws of Motion describe the relationship between forces and motion. The First Law (Inertia) states that objects remain at rest or in uniform motion unless acted upon by an external force. The Second Law relates force, mass, and acceleration (F=ma). The Third Law states that for every action, there is an equal and opposite reaction.",
+        advanced: "Newton's laws form the foundation of classical mechanics. The First Law defines inertial reference frames and the concept of inertia. The Second Law, F=ma, is actually F=dp/dt in its most general form. The Third Law reflects the conservation of momentum and is fundamental to understanding interactions between objects."
+      },
+      "photosynthesis": {
+        beginner: "Photosynthesis is how plants make their own food! They use sunlight, water, and carbon dioxide from the air to create sugar and oxygen. It's like plants are cooking their own meals using sunlight as their energy source!",
+        intermediate: "Photosynthesis is the process by which plants convert light energy into chemical energy. The equation is: 6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂. This occurs in chloroplasts and involves light-dependent and light-independent reactions.",
+        advanced: "Photosynthesis involves complex biochemical pathways including the light reactions in thylakoids (photosystems I and II, electron transport chain) and the Calvin cycle in the stroma. The process converts light energy to ATP and NADPH, which drive carbon fixation."
+      }
+    };
+
+    const topicKey = Object.keys(explanations).find(key => 
+      topic.toLowerCase().includes(key)
+    );
+
+    if (topicKey && explanations[topicKey][difficulty]) {
+      return explanations[topicKey][difficulty];
+    }
+
+    return `I'd be happy to help you learn about ${topic}! This is a fascinating topic. While I'm having trouble accessing my full knowledge base right now, I can tell you that understanding ${topic} is important for building a strong foundation in your studies. Would you like me to suggest some specific questions about ${topic} that I might be able to help with?`;
+  }
+
+  private getFallbackQuiz(topic: string, difficulty: string, questionCount: number): Quiz {
+    const sampleQuestions: QuizQuestion[] = [
+      {
+        id: 'q1',
+        question: `What is a key concept related to ${topic}?`,
+        type: 'multiple-choice',
+        options: ['Option A', 'Option B', 'Option C', 'Option D'],
+        correctAnswer: 'Option A',
+        explanation: 'This is the correct answer based on fundamental principles.',
+      },
+    ];
+
+    return {
+      id: Date.now().toString(),
+      title: `${topic} Quiz`,
+      topic,
+      difficulty,
+      questions: Array(questionCount).fill(null).map((_, index) => ({
+        ...sampleQuestions[0],
+        id: `q${index + 1}`,
+        question: `Question ${index + 1} about ${topic}`,
+      })),
+      timeLimit: questionCount * 60,
+    };
+  }
+
+  private getFallbackLessonPlan(topic: string, grade: string, duration: number, subject: string): LessonPlan {
+    return {
+      id: Date.now().toString(),
+      title: `${topic} - Grade ${grade}`,
+      subject,
+      grade,
+      duration,
+      objectives: [
+        `Students will understand the basic concepts of ${topic}`,
+        `Students will be able to apply ${topic} knowledge`,
+        `Students will demonstrate understanding through activities`,
+      ],
+      materials: ['Whiteboard', 'Handouts', 'Visual aids', 'Student notebooks'],
+      activities: [
+        {
+          id: 'activity1',
+          name: 'Introduction',
+          description: `Introduce the topic of ${topic} with engaging examples`,
+          duration: Math.floor(duration * 0.2),
+          type: 'presentation',
+        },
+        {
+          id: 'activity2',
+          name: 'Main Content',
+          description: `Detailed explanation of ${topic} concepts`,
+          duration: Math.floor(duration * 0.5),
+          type: 'presentation',
+        },
+        {
+          id: 'activity3',
+          name: 'Practice Activity',
+          description: `Students practice ${topic} concepts`,
+          duration: Math.floor(duration * 0.2),
+          type: 'hands-on',
+        },
+        {
+          id: 'activity4',
+          name: 'Wrap-up',
+          description: 'Review and assess understanding',
+          duration: Math.floor(duration * 0.1),
+          type: 'discussion',
+        },
+      ],
+      assessment: 'Formative assessment through questioning and observation',
+      createdAt: new Date(),
+    };
+  }
+}
+
+export const aiService = new AIService();

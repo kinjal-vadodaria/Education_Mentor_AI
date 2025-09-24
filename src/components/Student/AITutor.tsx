@@ -1,70 +1,123 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AppShell, Container, LoadingOverlay } from '@mantine/core';
-import { useDisclosure, useColorScheme } from '@mantine/hooks';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/Auth/LoginForm';
-import { Header } from './components/Layout/Header';
-import { Navbar } from './components/Layout/Navbar';
-import { StudentDashboard } from './components/Student/Dashboard';
-import { AITutor } from './components/Student/AITutor';
-import { QuizInterface } from './components/Student/QuizInterface';
-import { ProgressTracker } from './components/Student/ProgressTracker';
-import { TeacherDashboard } from './components/Teacher/Dashboard';
-import { LessonPlanner } from './components/Teacher/LessonPlanner';
-import { Analytics } from './components/Teacher/Analytics';
-import { StudentManagement } from './components/Teacher/StudentManagement';
+import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  TextInput,
+  Button,
+  Group,
+  Stack,
+  Card,
+  Grid,
+  ThemeIcon,
+  ActionIcon,
+  ScrollArea,
+  Badge,
+  Center,
+  Loader,
+} from '@mantine/core';
+import {
+  IconBrain,
+  IconSend,
+  IconMicrophone,
+  IconVolume,
+  IconTarget,
+  IconBolt,
+  IconBook,
+  IconMath,
+} from '@tabler/icons-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { aiService } from '../../services/aiService';
+import { notifications } from '@mantine/notifications';
 
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-  const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
+interface ChatMessage {
+  id: string;
+  content: string;
+  sender: 'user' | 'ai';
+  timestamp: Date;
+  type?: 'text' | 'explanation' | 'quiz';
+}
 
-  // Listen for tab change events from quick actions
+export const AITutor: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => Date.now().toString());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
+    scrollToBottom();
+  }, [messages]);
 
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  // Listen for tab change events from quick actions
   useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
+    // Welcome message
+    const welcomeMessage: ChatMessage = {
+      id: 'welcome',
+      content: `Hello ${user?.name}! I'm your AI tutor. I'm here to help you learn and understand any topic. What would you like to explore today?`,
+      sender: 'ai',
+      timestamp: new Date(),
+      type: 'text',
+    };
+    setMessages([welcomeMessage]);
+  }, [user?.name]);
+
+  const quickPrompts = [
+    {
+      text: t('aiTutor.explainNewton'),
+      icon: IconBolt,
+      color: 'blue',
+    },
+    {
+      text: t('aiTutor.createQuiz'),
+      icon: IconTarget,
+      color: 'green',
+    },
+    {
+      text: t('aiTutor.helpCalculus'),
+      icon: IconMath,
+      color: 'purple',
+    },
+    {
+      text: t('aiTutor.explainQuantum'),
+      icon: IconBook,
+      color: 'orange',
+    },
+  ];
+
+  const handleSendMessage = async (messageText?: string) => {
+    const text = messageText || inputValue.trim();
+    if (!text) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: text,
+      sender: 'user',
+      timestamp: new Date(),
+      type: 'text',
     };
 
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
 
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  if (!user) {
-    return <LoginForm />;
-  }
-
-  const renderContent = () => {
-    if (user.role === 'student') {
-      switch (activeTab) {
-        case 'dashboard':
-          return <StudentDashboard />;
-        case 'ai-tutor':
+    try {
+      // Check if user is asking for a quiz
+      if (text.toLowerCase().includes('quiz') || text.toLowerCase().includes('test')) {
         try {
-          const quiz = await aiService.generateQuiz(messageText, difficulty, 5, user?.id);
+          const quiz = await aiService.generateQuiz(text, user?.preferences?.difficulty || 'intermediate', 5, user?.id);
           const aiMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
-            content: `I've created a quiz for you on "${messageText}". Here are the questions:\n\n${quiz.questions.map((q, i) => `${i + 1}. ${q.question}\n${q.options?.map((opt, j) => `   ${String.fromCharCode(65 + j)}. ${opt}`).join('\n') || ''}`).join('\n\n')}\n\nWould you like to take this quiz in the Quiz section?`,
+            content: `I've created a quiz for you on "${text}". Here are the questions:\n\n${quiz.questions.map((q, i) => `${i + 1}. ${q.question}\n${q.options?.map((opt, j) => `   ${String.fromCharCode(65 + j)}. ${opt}`).join('\n') || ''}`).join('\n\n')}\n\nWould you like to take this quiz in the Quiz section?`,
             sender: 'ai',
             timestamp: new Date(),
             type: 'quiz',
@@ -73,18 +126,19 @@ const AppContent: React.FC = () => {
         } catch (error) {
           const aiMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
-            content: `I'd be happy to create a quiz for you on "${messageText}"! However, I'm having trouble generating it right now. You can try the Quiz section for pre-made quizzes on various topics.`,
+            content: `I'd be happy to create a quiz for you on "${text}"! However, I'm having trouble generating it right now. You can try the Quiz section for pre-made quizzes on various topics.`,
             sender: 'ai',
             timestamp: new Date(),
             type: 'text',
           };
           setMessages(prev => [...prev, aiMessage]);
         }
-        case 'settings':
+      } else {
+        // Regular explanation request
         try {
           const response = await aiService.generateExplanation(
-            messageText,
-            difficulty,
+            text,
+            user?.preferences?.difficulty || 'intermediate',
             i18n.language,
             user?.grade_level,
             user?.id,
@@ -102,20 +156,20 @@ const AppContent: React.FC = () => {
           // Provide a helpful fallback response
           const aiMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
-            content: this.getFallbackResponse(messageText, difficulty),
+            content: getFallbackResponse(text, user?.preferences?.difficulty || 'intermediate'),
             sender: 'ai',
             timestamp: new Date(),
             type: 'explanation',
           };
           setMessages(prev => [...prev, aiMessage]);
         }
-        case 'students':
-          return <StudentManagement />;
-        case 'resources':
-          return <Container>Resources coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        default:
+      }
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Failed to get response from AI tutor',
+        color: 'red',
+      });
       
       // Add fallback message
       const fallbackMessage: ChatMessage = {
@@ -126,8 +180,8 @@ const AppContent: React.FC = () => {
         type: 'text',
       };
       setMessages(prev => [...prev, fallbackMessage]);
-          return <TeacherDashboard />;
-      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -156,47 +210,218 @@ const AppContent: React.FC = () => {
     return `I'd be happy to help you learn about ${topic}! This is a fascinating topic. While I'm having trouble accessing my full knowledge base right now, I can tell you that understanding ${topic} is important for building a strong foundation in your studies. Would you like me to suggest some specific questions about ${topic} that I might be able to help with?`;
   };
 
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened },
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <Header opened={opened} toggle={toggle} />
-      </AppShell.Header>
+    <Container size="lg">
+      <Stack gap="xl">
+        {/* Header */}
+        <div style={{ textAlign: 'center' }}>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200 }}
+          >
+            <ThemeIcon size={80} color="indigo" variant="light" mx="auto" mb="md">
+              <IconBrain size={40} />
+            </ThemeIcon>
+          </motion.div>
+          <Title order={2} mb="xs">
+            {t('aiTutor.title')}
+          </Title>
+          <Text c="dimmed" size="lg">
+            {t('aiTutor.subtitle')}
+          </Text>
+        </div>
 
-      <AppShell.Navbar p="md">
-        <ErrorBoundary>
-          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-        </ErrorBoundary>
-      </AppShell.Navbar>
+        {/* Quick Prompts */}
+        {messages.length <= 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Text fw={500} mb="md" ta="center">
+              {t('aiTutor.quickPrompts')}
+            </Text>
+            <Grid>
+              {quickPrompts.map((prompt, index) => {
+                const Icon = prompt.icon;
+                return (
+                  <Grid.Col key={index} span={{ base: 12, sm: 6 }}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Card
+                        shadow="sm"
+                        padding="md"
+                        radius="md"
+                        withBorder
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleSendMessage(prompt.text)}
+                      >
+                        <Group gap="sm">
+                          <ThemeIcon color={prompt.color} variant="light">
+                            <Icon size={16} />
+                          </ThemeIcon>
+                          <Text size="sm" style={{ flex: 1 }}>
+                            {prompt.text}
+                          </Text>
+                        </Group>
+                      </Card>
+                    </motion.div>
+                  </Grid.Col>
+                );
+              })}
+            </Grid>
+          </motion.div>
+        )}
 
-      <AppShell.Main>
-        <Container size="xl" px="md">
-          <ErrorBoundary>
-            {renderContent()}
-          </ErrorBoundary>
-        </Container>
-      </AppShell.Main>
-    </AppShell>
+        {/* Chat Messages */}
+        <Paper shadow="sm" radius="md" withBorder style={{ height: '60vh' }}>
+          <ScrollArea h="100%" p="md" viewportRef={viewport}>
+            <Stack gap="md">
+              <AnimatePresence>
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Group
+                      align="flex-start"
+                      gap="sm"
+                      style={{
+                        flexDirection: message.sender === 'user' ? 'row-reverse' : 'row',
+                      }}
+                    >
+                      <ThemeIcon
+                        size="lg"
+                        color={message.sender === 'user' ? 'blue' : 'indigo'}
+                        variant="light"
+                      >
+                        {message.sender === 'user' ? (
+                          <IconBrain size={20} />
+                        ) : (
+                          <IconBrain size={20} />
+                        )}
+                      </ThemeIcon>
+                      
+                      <Paper
+                        p="md"
+                        radius="lg"
+                        style={{
+                          maxWidth: '70%',
+                          backgroundColor: message.sender === 'user' 
+                            ? 'var(--mantine-color-blue-0)' 
+                            : 'var(--mantine-color-gray-0)',
+                        }}
+                      >
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="flex-start">
+                            <Text size="sm" fw={500}>
+                              {message.sender === 'user' ? 'You' : 'AI Tutor'}
+                            </Text>
+                            {message.type && (
+                              <Badge size="xs" variant="light">
+                                {message.type}
+                              </Badge>
+                            )}
+                          </Group>
+                          
+                          <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                            {message.content}
+                          </Text>
+                          
+                          <Text size="xs" c="dimmed">
+                            {message.timestamp.toLocaleTimeString()}
+                          </Text>
+                        </Stack>
+                      </Paper>
+                    </Group>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              
+              {isLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <Group align="flex-start" gap="sm">
+                    <ThemeIcon size="lg" color="indigo" variant="light">
+                      <IconBrain size={20} />
+                    </ThemeIcon>
+                    <Paper p="md" radius="lg" style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+                      <Group gap="sm">
+                        <Loader size="sm" />
+                        <Text size="sm" c="dimmed">
+                          {t('aiTutor.thinking')}
+                        </Text>
+                      </Group>
+                    </Paper>
+                  </Group>
+                </motion.div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </Stack>
+          </ScrollArea>
+        </Paper>
+
+        {/* Input Area */}
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group gap="sm">
+            <TextInput
+              placeholder={t('aiTutor.askAnything')}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              style={{ flex: 1 }}
+              size="lg"
+            />
+            
+            <ActionIcon
+              size="lg"
+              variant="subtle"
+              color="gray"
+              title={t('aiTutor.voiceInput')}
+            >
+              <IconMicrophone size={20} />
+            </ActionIcon>
+            
+            <ActionIcon
+              size="lg"
+              variant="subtle"
+              color="gray"
+              title={t('aiTutor.textToSpeech')}
+            >
+              <IconVolume size={20} />
+            </ActionIcon>
+            
+            <Button
+              onClick={() => handleSendMessage()}
+              loading={isLoading}
+              leftSection={<IconSend size={16} />}
+              size="lg"
+              disabled={!inputValue.trim()}
+            >
+              Send
+            </Button>
+          </Group>
+        </Paper>
+      </Stack>
+    </Container>
   );
 };
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-}
-
-export default App;
