@@ -76,6 +76,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } catch (error) {
         errorReporting.reportError(error, { context: 'INITIALIZE_AUTH' });
+        // Ensure loading state is reset even on error
+        setIsLoading(false);
       } finally {
         setIsLoading(false);
       }

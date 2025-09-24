@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell, Container } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -19,33 +18,8 @@ import { Analytics } from './components/Teacher/Analytics';
 import { StudentManagement } from './components/Teacher/StudentManagement';
 import { Settings } from './components/common/Settings';
 
-// Protected Route Component
-const ProtectedRoute: React.FC<{ 
-  children: React.ReactNode; 
-  requiredRole?: 'student' | 'teacher';
-}> = ({ children, requiredRole }) => {
+const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (requiredRole && user.role !== requiredRole) {
-    // Redirect to appropriate dashboard based on actual role
-    const redirectPath = user.role === 'student' ? '/student/dashboard' : '/teacher/dashboard';
-    return <Navigate to={redirectPath} replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Dashboard Layout Component
-const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
   const [opened, { toggle }] = useDisclosure();
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -60,6 +34,52 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       window.removeEventListener('changeTab', handleTabChange as EventListener);
     };
   }, []);
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  const renderContent = () => {
+    if (user.role === 'student') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <StudentDashboard />;
+        case 'ai-tutor':
+          return <AITutor />;
+        case 'quizzes':
+          return <QuizInterface />;
+        case 'progress':
+          return <ProgressTracker />;
+        case 'library':
+          return <Container>Library coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <StudentDashboard />;
+      }
+    } else {
+      switch (activeTab) {
+        case 'dashboard':
+          return <TeacherDashboard />;
+        case 'lesson-planner':
+          return <LessonPlanner />;
+        case 'analytics':
+          return <Analytics />;
+        case 'students':
+          return <StudentManagement />;
+        case 'resources':
+          return <Container>Resources coming soon...</Container>;
+        case 'settings':
+          return <Settings />;
+        default:
+          return <TeacherDashboard />;
+      }
+    }
+  };
 
   return (
     <AppShell
@@ -84,66 +104,11 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       <AppShell.Main>
         <Container size="xl" px="md">
           <ErrorBoundary>
-            {children}
+            {renderContent()}
           </ErrorBoundary>
         </Container>
       </AppShell.Main>
     </AppShell>
-  );
-};
-
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  return (
-    <Routes>
-      {/* Public Routes */}
-      <Route 
-        path="/" 
-        element={!user ? <LoginForm /> : <Navigate to={user.role === 'student' ? '/student/dashboard' : '/teacher/dashboard'} replace />} 
-      />
-      
-      {/* Student Routes */}
-      <Route path="/student/*" element={
-        <ProtectedRoute requiredRole="student">
-          <DashboardLayout>
-            <Routes>
-              <Route path="dashboard" element={<StudentDashboard />} />
-              <Route path="ai-tutor" element={<AITutor />} />
-              <Route path="quizzes" element={<QuizInterface />} />
-              <Route path="progress" element={<ProgressTracker />} />
-              <Route path="library" element={<Container>Library coming soon...</Container>} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/student/dashboard" replace />} />
-            </Routes>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Teacher Routes */}
-      <Route path="/teacher/*" element={
-        <ProtectedRoute requiredRole="teacher">
-          <DashboardLayout>
-            <Routes>
-              <Route path="dashboard" element={<TeacherDashboard />} />
-              <Route path="lesson-planner" element={<LessonPlanner />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="students" element={<StudentManagement />} />
-              <Route path="resources" element={<Container>Resources coming soon...</Container>} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/teacher/dashboard" replace />} />
-            </Routes>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
   );
 };
 

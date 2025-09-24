@@ -8,7 +8,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  },
+});
 
 // Auth functions
 export const signIn = async (email: string, password: string) => {
@@ -67,8 +73,8 @@ export const getCurrentUser = async () => {
     created_at: user.created_at,
     preferences: {
       language: 'en',
-      theme: 'light',
-      difficulty: 'intermediate'
+      theme: 'light' as 'light' | 'dark',
+      difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced'
     }
   };
 };

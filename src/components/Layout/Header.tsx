@@ -17,9 +17,12 @@ import {
   IconSettings,
   IconUser,
   IconWorld,
+  IconSun,
+  IconMoon,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
   opened: boolean;
@@ -29,6 +32,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
   const { t, i18n } = useTranslation();
   const { user, signOut } = useAuth();
+  const { colorScheme, toggleColorScheme } = useTheme();
 
   const languages = [
     { value: 'en', label: '🇺🇸 English' },
@@ -79,6 +83,16 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
       </Group>
 
       <Group gap="sm">
+        {/* Theme Toggle */}
+        <ActionIcon
+          variant="default"
+          size="lg"
+          onClick={toggleColorScheme}
+          title={colorScheme === 'light' ? t('common.darkMode') : t('common.lightMode')}
+        >
+          {colorScheme === 'light' ? <IconMoon size={18} /> : <IconSun size={18} />}
+        </ActionIcon>
+
         {/* Language Selector */}
         <Select
           data={languages}

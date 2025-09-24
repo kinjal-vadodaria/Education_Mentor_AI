@@ -19,6 +19,7 @@ import {
   NumberInput,
   Badge,
 } from '@mantine/core';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useForm } from '@mantine/form';
 import {
   IconSettings,
@@ -39,6 +40,7 @@ import { notifications } from '@mantine/notifications';
 export const Settings: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { user, refreshUser } = useAuth();
+  const { colorScheme, toggleColorScheme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   const languages = [
@@ -65,6 +67,11 @@ export const Settings: React.FC = () => {
       email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
     },
   });
+
+  // Early return if user is not available
+  if (!user) {
+    return <div>Loading...</div>;
+  }
 
   const passwordForm = useForm({
     initialValues: {
@@ -274,6 +281,23 @@ export const Settings: React.FC = () => {
                       leftSection={<IconWorld size={16} />}
                       searchable
                     />
+                  </div>
+
+                  <div>
+                    <Text fw={500} mb="xs">Theme</Text>
+                    <Group justify="space-between">
+                      <div>
+                        <Text fw={500}>{colorScheme === 'light' ? t('common.lightMode') : t('common.darkMode')}</Text>
+                        <Text size="sm" c="dimmed">
+                          Choose your preferred theme
+                        </Text>
+                      </div>
+                      <Switch
+                        checked={colorScheme === 'dark'}
+                        onChange={handleThemeChange}
+                        size="lg"
+                      />
+                    </Group>
                   </div>
 
                   <div>
