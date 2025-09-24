@@ -119,8 +119,8 @@ export const QuizInterface: React.FC = () => {
       setQuizResult(result);
       setShowResults(true);
     } catch (error) {
-      console.error('Error grading quiz:', error);
-      showNotification({
+      errorReporting.reportError(error, { context: 'GRADE_QUIZ' });
+      notifications.show({
         title: 'Error',
         message: 'Failed to grade quiz. Please try again.',
         color: 'red',

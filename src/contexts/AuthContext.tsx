@@ -93,16 +93,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleSignUp = async (email: string, password: string, name: string, role: 'student' | 'teacher', gradeLevel?: number) => {
     try {
-      const { user: authUser } = await signUp(email, password);
-      if (authUser) {
-        await createUserProfile(authUser.id, {
-          email,
-          name,
-          role,
-          grade_level: gradeLevel,
-        });
-        await refreshUser();
+      // Sign up with metadata
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+            grade_level: gradeLevel,
+          }
+        }
+      });
+
+      if (error) {
+        errorReporting.reportError(error, { context: 'SIGN_UP' });
+        throw error;
       }
+
+      // The trigger will automatically create the user profile
+      // Wait a moment for the trigger to complete
+      setTimeout(async () => {
+        await refreshUser();
+      }, 1000);
+
     } catch (error) {
       errorReporting.reportError(error, { context: 'SIGN_UP' });
       throw error;

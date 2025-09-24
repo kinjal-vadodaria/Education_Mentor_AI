@@ -59,14 +59,18 @@ export const StudentDashboard: React.FC = () => {
         getQuizResults(user.id),
       ]);
 
-      if (progressData.data) setProgress(progressData.data as ProgressData[]);
-      if (quizData.data) setRecentQuizzes(quizData.data.slice(0, 5));
+      if (progressData.data) {
+        setProgress(progressData.data as ProgressData[]);
+      }
+      if (quizData.data) {
+        setRecentQuizzes(quizData.data.slice(0, 5));
+      }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      errorReporting.reportError(error, { context: 'LOAD_DASHBOARD_DATA' });
     } finally {
       setLoading(false);
     }
-  }, [user, setProgress, setRecentQuizzes, setLoading]);
+  }, [user]);
 
   const totalXP = (progress as ProgressData[]).reduce((sum, p) => sum + (p.xp_points || 0), 0);
   const currentLevel = Math.floor(totalXP / 100) + 1;

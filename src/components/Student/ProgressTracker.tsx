@@ -69,9 +69,7 @@ export const ProgressTracker: React.FC = () => {
         setQuizResults(quizData.data);
       }
     } catch (error) {
-      console.error('Error loading progress data:', error);
-    } finally {
-      setIsLoading(false);
+      errorReporting.reportError(error, { context: 'LOAD_PROGRESS_DATA' });
     }
   }, [user]);
 

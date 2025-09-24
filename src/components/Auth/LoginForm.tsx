@@ -128,8 +128,8 @@ export const LoginForm: React.FC = () => {
                     <Select
                       label="Account Type"
                       data={[
-                        { value: 'student', label: 'Student' },
-                        { value: 'teacher', label: 'Teacher' },
+                        { value: 'student', label: '👨‍🎓 Student' },
+                        { value: 'teacher', label: '👩‍🏫 Teacher' },
                       ]}
                       {...form.getInputProps('role')}
                       leftSection={
@@ -203,9 +203,9 @@ export const LoginForm: React.FC = () => {
             </Group>
 
             {/* Demo Accounts */}
-            <Paper p="md" bg="gray.0" radius="sm">
+            <Paper p="md" style={{ backgroundColor: 'var(--mantine-color-gray-0)' }} radius="sm">
               <Text size="sm" fw={500} mb="xs">
-                Demo Accounts:
+                🚀 Demo Accounts (Click to auto-fill):
               </Text>
               <Group gap="xs">
                 <Button
@@ -218,7 +218,7 @@ export const LoginForm: React.FC = () => {
                     });
                   }}
                 >
-                  Student Demo
+                  👨‍🎓 Student Demo
                 </Button>
                 <Button
                   size="xs"
@@ -230,9 +230,12 @@ export const LoginForm: React.FC = () => {
                     });
                   }}
                 >
-                  Teacher Demo
+                  👩‍🏫 Teacher Demo
                 </Button>
               </Group>
+              <Text size="xs" c="dimmed" mt="xs">
+                Use these accounts to test the app without creating new accounts
+              </Text>
             </Paper>
           </Stack>
         </Paper>

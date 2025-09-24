@@ -53,24 +53,50 @@ export const getCurrentUser = async () => {
   
   if (!user) return null;
 
-  // First check if the user exists in our custom users table
+  // Get user profile from users table
   const { data: userProfile, error: userError } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (userProfile) {
     return userProfile;
   }
 
-  // If not found in users table, this might be a new auth user without a profile
-  if (userError && userError.code !== 'PGRST116') {
-    errorReporting.reportError(userError, { context: 'GET_CURRENT_USER' });
-    throw userError;
+  // If user doesn't exist in users table, create profile
+  if (!userProfile && !userError) {
+    try {
+      const { data: newProfile, error: createError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: user.id,
+            email: user.email || '',
+            name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            role: user.user_metadata?.role || 'student',
+          },
+        ])
+        .select()
+        .single();
+
+      if (createError) {
+        errorReporting.reportError(createError, { context: 'CREATE_USER_PROFILE_AUTO' });
+        return null;
+      }
+
+      return newProfile;
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'AUTO_CREATE_PROFILE' });
+      return null;
+    }
   }
 
-  // Return null if no profile exists yet
+  if (userError) {
+    errorReporting.reportError(userError, { context: 'GET_CURRENT_USER' });
+    return null;
+  }
+
   return null;
 };
 

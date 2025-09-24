@@ -20,7 +20,6 @@ import {
   Badge,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useMantineColorScheme } from '@mantine/core';
 import {
   IconSettings,
   IconUser,
@@ -40,7 +39,6 @@ import { notifications } from '@mantine/notifications';
 export const Settings: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { user, refreshUser } = useAuth();
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [isLoading, setIsLoading] = useState(false);
 
   const languages = [
@@ -267,22 +265,6 @@ export const Settings: React.FC = () => {
                 </Group>
 
                 <Stack gap="md">
-                  <Group justify="space-between">
-                    <div>
-                      <Text fw={500}>Dark Mode</Text>
-                      <Text size="sm" c="dimmed">
-                        Toggle between light and dark themes
-                      </Text>
-                    </div>
-                    <Switch
-                      checked={colorScheme === 'dark'}
-                      onChange={handleThemeChange}
-                      size="lg"
-                    />
-                  </Group>
-
-                  <Divider />
-
                   <div>
                     <Text fw={500} mb="xs">Language</Text>
                     <Select
