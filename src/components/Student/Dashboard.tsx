@@ -81,14 +81,13 @@ export const StudentDashboard: React.FC = () => {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'ai-tutor':
-        // This will be handled by the parent component's tab change
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'ai-tutor' }));
+        window.location.href = '/student/ai-tutor';
         break;
       case 'quiz':
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'quizzes' }));
+        window.location.href = '/student/quizzes';
         break;
       case 'progress':
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'progress' }));
+        window.location.href = '/student/progress';
         break;
       default:
         break;

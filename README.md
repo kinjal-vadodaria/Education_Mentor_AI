@@ -142,6 +142,14 @@ Run the test script to verify everything is working:
 bash scripts/test-auth.sh
 ```
 
+### 🔧 Database Migration for Auth Fix
+
+If you're experiencing role assignment issues, run this migration:
+```bash
+# Connect to your Supabase database and run:
+psql "your_supabase_db_url" -f supabase/migrations/fix_auth_trigger.sql
+```
+
 ### 🎯 Demo Accounts
 
 Use these pre-configured accounts to test the app:
@@ -150,11 +158,34 @@ Use these pre-configured accounts to test the app:
 - Email: `teacher@demo.com`
 - Password: `demo123`
 - Features: Lesson planning, student analytics, course management
+- **Expected Behavior**: After login, should redirect to `/teacher/dashboard`
 
 **Student Account:**
 - Email: `student@demo.com`  
 - Password: `demo123`
-- Features: AI tutoring, quizzes, progress tracking
+- Features: AI tutoring, quizzes, progress tracking  
+- **Expected Behavior**: After login, should redirect to `/student/dashboard`
+
+### 🐛 Debugging Authentication Issues
+
+If you're experiencing login/redirect issues:
+
+1. **Check Browser Console**: Look for authentication debug logs:
+   ```
+   🔑 Attempting sign in for: user@example.com
+   🔐 Auth state changed: SIGNED_IN
+   👤 Current user data: { role: 'student', ... }
+   🚀 Redirecting user based on role: student
+   ```
+
+2. **Verify Database Trigger**: Ensure the `handle_new_user()` trigger is working:
+   ```sql
+   SELECT * FROM users WHERE email = 'your-test-email@example.com';
+   ```
+
+3. **Test Role Assignment**: Create a new account and verify the role is set correctly.
+
+4. **Check Network Tab**: Verify Supabase API calls are successful.
 
 ## 🔧 Development
 

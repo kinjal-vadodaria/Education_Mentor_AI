@@ -53,6 +53,8 @@ export const getCurrentUser = async () => {
   
   if (!user) return null;
 
+  console.log('🔍 Fetching user profile for:', user.id);
+
   // Get user profile from users table
   const { data: userProfile, error: userError } = await supabase
     .from('users')
@@ -60,12 +62,15 @@ export const getCurrentUser = async () => {
     .eq('id', user.id)
     .maybeSingle();
 
+  console.log('📊 User profile query result:', { userProfile, userError });
   if (userProfile) {
+    console.log('✅ Found existing user profile:', userProfile);
     return userProfile;
   }
 
   // If user doesn't exist in users table, create profile
   if (!userProfile && !userError) {
+    console.log('🆕 Creating new user profile from auth metadata:', user.user_metadata);
     try {
       const { data: newProfile, error: createError } = await supabase
         .from('users')
@@ -75,24 +80,29 @@ export const getCurrentUser = async () => {
             email: user.email || '',
             name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
             role: user.user_metadata?.role || 'student',
+            grade_level: user.user_metadata?.grade_level || null,
           },
         ])
         .select()
         .single();
 
       if (createError) {
+        console.error('❌ Failed to create user profile:', createError);
         errorReporting.reportError(createError, { context: 'CREATE_USER_PROFILE_AUTO' });
         return null;
       }
 
+      console.log('✅ Created new user profile:', newProfile);
       return newProfile;
     } catch (error) {
+      console.error('❌ Error in auto-create profile:', error);
       errorReporting.reportError(error, { context: 'AUTO_CREATE_PROFILE' });
       return null;
     }
   }
 
   if (userError) {
+    console.error('❌ Error fetching user profile:', userError);
     errorReporting.reportError(userError, { context: 'GET_CURRENT_USER' });
     return null;
   }
