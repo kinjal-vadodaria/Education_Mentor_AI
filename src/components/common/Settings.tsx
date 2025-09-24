@@ -20,7 +20,7 @@ import {
   Badge,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useMantineColorScheme } from '@mantine/hooks';
+import { useMantineColorScheme } from '@mantine/core';
 import {
   IconSettings,
   IconUser,
