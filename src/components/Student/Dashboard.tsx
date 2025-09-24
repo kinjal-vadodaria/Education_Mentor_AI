@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Grid,
@@ -7,14 +7,10 @@ import {
   Title,
   Group,
   Stack,
-  Progress,
   Badge,
   ThemeIcon,
-  ActionIcon,
   Container,
   Paper,
-  RingProgress,
-  Center,
 } from '@mantine/core';
 import {
   IconTrophy,
@@ -27,17 +23,16 @@ import {
   IconClock,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentProgress, getQuizResults } from '../../services/supabase';
+import { errorReporting } from '../../services/errorReporting';
 
 export const StudentDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [progress, setProgress] = useState<any[]>([]);
+  const [progress, setProgress] = useState<ProgressData[]>([]);
   const [recentQuizzes, setRecentQuizzes] = useState<QuizResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setLoading] = useState(true);
 
   interface QuizResult {
     quiz_topic: string;
@@ -52,11 +47,7 @@ export const StudentDashboard: React.FC = () => {
     badges?: string[];
   }
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [user]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -65,14 +56,22 @@ export const StudentDashboard: React.FC = () => {
         getQuizResults(user.id),
       ]);
 
-      if (progressData.data) setProgress(progressData.data as ProgressData[]);
-      if (quizData.data) setRecentQuizzes(quizData.data.slice(0, 5));
+      if (progressData.data) {
+        setProgress(progressData.data as ProgressData[]);
+      }
+      if (quizData.data) {
+        setRecentQuizzes(quizData.data.slice(0, 5));
+      }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      errorReporting.reportError(error, { context: 'LOAD_DASHBOARD_DATA' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const totalXP = (progress as ProgressData[]).reduce((sum, p) => sum + (p.xp_points || 0), 0);
   const currentLevel = Math.floor(totalXP / 100) + 1;
@@ -83,14 +82,13 @@ export const StudentDashboard: React.FC = () => {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'ai-tutor':
-        // This will be handled by the parent component's tab change
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'ai-tutor' }));
+        window.location.href = '/student/ai-tutor';
         break;
       case 'quiz':
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'quizzes' }));
+        window.location.href = '/student/quizzes';
         break;
       case 'progress':
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'progress' }));
+        window.location.href = '/student/progress';
         break;
       default:
         break;

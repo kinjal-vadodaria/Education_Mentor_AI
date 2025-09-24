@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase, signIn, signUp, signOut, getCurrentUser, createUserProfile } from '../services/supabase';
 import { errorReporting } from '../services/errorReporting';
 
@@ -42,11 +43,24 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   const refreshUser = async () => {
     try {
+      console.log('🔄 Refreshing user data...');
       const currentUser = await getCurrentUser();
+      console.log('👤 Current user data:', currentUser);
       setUser(currentUser);
+      
+      // Handle role-based redirection after user data is loaded
+      if (currentUser && window.location.pathname === '/') {
+        console.log('🚀 Redirecting user based on role:', currentUser.role);
+        if (currentUser.role === 'student') {
+          navigate('/student/dashboard');
+        } else if (currentUser.role === 'teacher') {
+          navigate('/teacher/dashboard');
+        }
+      }
     } catch (error) {
       errorReporting.reportError(error, { context: 'REFRESH_USER' });
       setUser(null);
@@ -70,10 +84,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Auth state changed:', event, session?.user?.id);
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('✅ User signed in, refreshing profile...');
         await refreshUser();
       } else if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
         setUser(null);
+        navigate('/');
       }
       setIsLoading(false);
     });
@@ -83,8 +101,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleSignIn = async (email: string, password: string) => {
     try {
+      console.log('🔑 Attempting sign in for:', email);
       await signIn(email, password);
-      await refreshUser();
+      // Don't call refreshUser here - let the auth state change handler do it
     } catch (error) {
       errorReporting.reportError(error, { context: 'SIGN_IN' });
       throw error;
@@ -93,16 +112,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleSignUp = async (email: string, password: string, name: string, role: 'student' | 'teacher', gradeLevel?: number) => {
     try {
-      const { user: authUser } = await signUp(email, password);
-      if (authUser) {
-        await createUserProfile(authUser.id, {
-          email,
-          name,
-          role,
-          grade_level: gradeLevel,
-        });
-        await refreshUser();
+      console.log('📝 Attempting sign up:', { email, name, role, gradeLevel });
+      // Sign up with metadata
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+            grade_level: gradeLevel,
+          }
+        }
+      });
+
+      if (error) {
+        errorReporting.reportError(error, { context: 'SIGN_UP' });
+        throw error;
       }
+
+      console.log('✅ Sign up successful:', data);
+      // The auth state change handler will handle the redirection
+
     } catch (error) {
       errorReporting.reportError(error, { context: 'SIGN_UP' });
       throw error;

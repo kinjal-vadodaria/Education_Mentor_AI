@@ -33,13 +33,13 @@ export const TeacherDashboard: React.FC = () => {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'lesson-planner':
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'lesson-planner' }));
+        window.location.href = '/teacher/lesson-planner';
         break;
       case 'analytics':
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'analytics' }));
+        window.location.href = '/teacher/analytics';
         break;
       case 'students':
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: 'students' }));
+        window.location.href = '/teacher/students';
         break;
       default:
         break;

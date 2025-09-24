@@ -34,7 +34,7 @@ import {
   IconCheck,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../contexts/AuthContext';
+
 import { aiService, LessonPlan } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
 

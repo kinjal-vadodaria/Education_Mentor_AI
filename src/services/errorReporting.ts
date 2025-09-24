@@ -1,7 +1,7 @@
 interface ErrorContext {
   context?: string;
   userId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 class ErrorReportingService {
@@ -21,7 +21,7 @@ class ErrorReportingService {
     // For now, we'll just log to console
   }
 
-  reportUserAction(action: string, data?: Record<string, any>): void {
+  reportUserAction(action: string, data?: Record<string, unknown>): void {
     console.log('User Action:', action, data);
     // In production, you would send this to analytics
   }

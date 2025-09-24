@@ -11,7 +11,8 @@ if (!API_KEY) {
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 // Rate limiting
-const requestCache = new Map<string, { response: any; timestamp: number }>();
+type CachedResponse = Quiz | LessonPlan | { content: string };
+const requestCache = new Map<string, { response: CachedResponse; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const RATE_LIMIT = 10; // requests per minute
 const rateLimitTracker = new Map<string, number[]>();
@@ -55,6 +56,29 @@ export interface LessonActivity {
   type: 'presentation' | 'hands-on' | 'discussion' | 'assessment';
 }
 
+interface QuizData {
+  title: string;
+  questions: {
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+  }[];
+}
+
+interface LessonPlanData {
+  title: string;
+  objectives: string[];
+  materials: string[];
+  activities: {
+    name: string;
+    description: string;
+    duration: number;
+    type: string;
+  }[];
+  assessment: string;
+}
+
 class AIService {
   private checkRateLimit(userId?: string): boolean {
     const key = userId || 'anonymous';
@@ -73,7 +97,7 @@ class AIService {
     return true;
   }
 
-  private getCachedResponse(cacheKey: string): any | null {
+  private getCachedResponse(cacheKey: string): Quiz | LessonPlan | { content: string } | null {
     const cached = requestCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       return cached.response;
@@ -81,7 +105,7 @@ class AIService {
     return null;
   }
 
-  private setCachedResponse(cacheKey: string, response: any): void {
+  private setCachedResponse(cacheKey: string, response: Quiz | LessonPlan | { content: string }): void {
     requestCache.set(cacheKey, { response, timestamp: Date.now() });
   }
 
@@ -95,7 +119,7 @@ class AIService {
   ): Promise<{ content: string }> {
     const cacheKey = `explanation:${topic}:${difficulty}:${language}:${gradeLevel}`;
     const cached = this.getCachedResponse(cacheKey);
-    if (cached) return cached;
+    if (cached && 'content' in cached) return cached as { content: string };
 
     if (!this.checkRateLimit(userId)) {
       throw new Error('Rate limit exceeded. Please try again later.');
@@ -151,7 +175,7 @@ class AIService {
   ): Promise<Quiz> {
     const cacheKey = `quiz:${topic}:${difficulty}:${questionCount}`;
     const cached = this.getCachedResponse(cacheKey);
-    if (cached) return cached;
+    if (cached && 'topic' in cached && 'questions' in cached) return cached as Quiz;
 
     if (!this.checkRateLimit(userId)) {
       throw new Error('Rate limit exceeded. Please try again later.');
@@ -188,14 +212,14 @@ class AIService {
         throw new Error('Invalid response format');
       }
 
-      const quizData = JSON.parse(jsonMatch[0]);
-      
+      const quizData: QuizData = JSON.parse(jsonMatch[0]);
+
       const quiz: Quiz = {
         id: Date.now().toString(),
         title: quizData.title || `${topic} Quiz`,
         topic,
         difficulty,
-        questions: quizData.questions.map((q: any, index: number) => ({
+        questions: quizData.questions.map((q, index: number) => ({
           id: `q${index + 1}`,
           question: q.question,
           type: 'multiple-choice' as const,
@@ -282,7 +306,7 @@ class AIService {
   ): Promise<LessonPlan> {
     const cacheKey = `lesson:${topic}:${grade}:${duration}:${subject}`;
     const cached = this.getCachedResponse(cacheKey);
-    if (cached) return cached;
+    if (cached && 'subject' in cached && 'objectives' in cached) return cached as LessonPlan;
 
     if (!this.checkRateLimit()) {
       throw new Error('Rate limit exceeded. Please try again later.');
@@ -330,8 +354,8 @@ class AIService {
         throw new Error('Invalid response format');
       }
 
-      const planData = JSON.parse(jsonMatch[0]);
-      
+      const planData: LessonPlanData = JSON.parse(jsonMatch[0]);
+
       const lessonPlan: LessonPlan = {
         id: Date.now().toString(),
         title: planData.title || `${topic} - Grade ${grade}`,
@@ -340,12 +364,12 @@ class AIService {
         duration,
         objectives: planData.objectives || [],
         materials: planData.materials || [],
-        activities: planData.activities.map((activity: any, index: number) => ({
+        activities: planData.activities.map((activity, index: number) => ({
           id: `activity${index + 1}`,
           name: activity.name,
           description: activity.description,
           duration: activity.duration,
-          type: activity.type || 'presentation',
+          type: (activity.type || 'presentation') as 'presentation' | 'hands-on' | 'discussion' | 'assessment',
         })),
         assessment: planData.assessment || 'Formative assessment through observation and questioning',
         createdAt: new Date(),
@@ -387,27 +411,189 @@ class AIService {
   }
 
   private getFallbackQuiz(topic: string, difficulty: string, questionCount: number): Quiz {
-    const sampleQuestions: QuizQuestion[] = [
-      {
-        id: 'q1',
-        question: `What is a key concept related to ${topic}?`,
-        type: 'multiple-choice',
-        options: ['Option A', 'Option B', 'Option C', 'Option D'],
-        correctAnswer: 'Option A',
-        explanation: 'This is the correct answer based on fundamental principles.',
-      },
-    ];
+    const topicQuestions: Record<string, QuizQuestion[]> = {
+      "newton": [
+        {
+          id: 'q1',
+          question: "What is Newton's First Law of Motion?",
+          type: 'multiple-choice',
+          options: ["An object at rest stays at rest", "Force equals mass times acceleration", "For every action there is an equal and opposite reaction", "Objects fall at the same rate"],
+          correctAnswer: "An object at rest stays at rest",
+          explanation: "Newton's First Law states that an object at rest stays at rest and an object in motion stays in motion unless acted upon by an external force.",
+        },
+        {
+          id: 'q2',
+          question: "What does Newton's Second Law describe?",
+          type: 'multiple-choice',
+          options: ["Inertia", "Acceleration due to gravity", "Relationship between force, mass, and acceleration", "Conservation of energy"],
+          correctAnswer: "Relationship between force, mass, and acceleration",
+          explanation: "F = ma, where force is proportional to mass and acceleration.",
+        },
+        {
+          id: 'q3',
+          question: "What is Newton's Third Law?",
+          type: 'multiple-choice',
+          options: ["Objects attract each other", "For every action there is an equal and opposite reaction", "Energy is conserved", "Mass is conserved"],
+          correctAnswer: "For every action there is an equal and opposite reaction",
+          explanation: "When one object exerts a force on another, the second object exerts an equal force back.",
+        },
+        {
+          id: 'q4',
+          question: "Which law explains why you feel pushed back when a car accelerates?",
+          type: 'multiple-choice',
+          options: ["First Law", "Second Law", "Third Law", "Law of Gravity"],
+          correctAnswer: "Third Law",
+          explanation: "The car's acceleration pushes you back due to the equal and opposite reaction.",
+        },
+        {
+          id: 'q5',
+          question: "What is inertia?",
+          type: 'multiple-choice',
+          options: ["The tendency of objects to stay in motion or at rest", "The force of gravity", "The speed of light", "The amount of matter in an object"],
+          correctAnswer: "The tendency of objects to stay in motion or at rest",
+          explanation: "Inertia is the property that resists changes in motion, as described by Newton's First Law.",
+        },
+      ],
+      "photosynthesis": [
+        {
+          id: 'q1',
+          question: "What is photosynthesis?",
+          type: 'multiple-choice',
+          options: ["Process by which plants make food", "Process of respiration", "Process of transpiration", "Process of pollination"],
+          correctAnswer: "Process by which plants make food",
+          explanation: "Photosynthesis is how plants convert light energy into chemical energy to make food.",
+        },
+        {
+          id: 'q2',
+          question: "What gas do plants take in during photosynthesis?",
+          type: 'multiple-choice',
+          options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"],
+          correctAnswer: "Carbon Dioxide",
+          explanation: "Plants take in carbon dioxide from the air for photosynthesis.",
+        },
+        {
+          id: 'q3',
+          question: "What is the main product of photosynthesis?",
+          type: 'multiple-choice',
+          options: ["Glucose", "Protein", "Fat", "Vitamin"],
+          correctAnswer: "Glucose",
+          explanation: "Glucose is the sugar produced by plants during photosynthesis.",
+        },
+        {
+          id: 'q4',
+          question: "Where does photosynthesis occur in plants?",
+          type: 'multiple-choice',
+          options: ["Roots", "Stems", "Leaves", "Flowers"],
+          correctAnswer: "Leaves",
+          explanation: "Photosynthesis primarily occurs in the leaves where chlorophyll is present.",
+        },
+        {
+          id: 'q5',
+          question: "What is the role of chlorophyll in photosynthesis?",
+          type: 'multiple-choice',
+          options: ["Absorbs water", "Absorbs light", "Absorbs minerals", "Absorbs oxygen"],
+          correctAnswer: "Absorbs light",
+          explanation: "Chlorophyll absorbs light energy needed for photosynthesis.",
+        },
+      ],
+      "electricity": [
+        {
+          id: 'q1',
+          question: "What is electric current?",
+          type: 'multiple-choice',
+          options: ["Flow of water", "Flow of electrons", "Flow of air", "Flow of heat"],
+          correctAnswer: "Flow of electrons",
+          explanation: "Electric current is the flow of electric charge, typically electrons.",
+        },
+        {
+          id: 'q2',
+          question: "What is the unit of electric current?",
+          type: 'multiple-choice',
+          options: ["Volt", "Ampere", "Ohm", "Watt"],
+          correctAnswer: "Ampere",
+          explanation: "Ampere is the unit of electric current.",
+        },
+        {
+          id: 'q3',
+          question: "What is resistance?",
+          type: 'multiple-choice',
+          options: ["Opposition to current flow", "Flow of current", "Generation of current", "Storage of current"],
+          correctAnswer: "Opposition to current flow",
+          explanation: "Resistance opposes the flow of electric current.",
+        },
+        {
+          id: 'q4',
+          question: "What is Ohm's Law?",
+          type: 'multiple-choice',
+          options: ["V = IR", "P = IV", "E = mc²", "F = ma"],
+          correctAnswer: "V = IR",
+          explanation: "Ohm's Law states that voltage equals current times resistance.",
+        },
+        {
+          id: 'q5',
+          question: "What is a conductor?",
+          type: 'multiple-choice',
+          options: ["Material that allows current to flow", "Material that blocks current", "Material that generates current", "Material that stores current"],
+          correctAnswer: "Material that allows current to flow",
+          explanation: "Conductors allow electric current to flow through them easily.",
+        },
+      ],
+      "default": [
+        {
+          id: 'q1',
+          question: `What is a key concept in ${topic}?`,
+          type: 'multiple-choice',
+          options: ["Concept A", "Concept B", "Concept C", "Concept D"],
+          correctAnswer: "Concept A",
+          explanation: "This is the correct answer based on fundamental principles.",
+        },
+        {
+          id: 'q2',
+          question: `How does ${topic} work?`,
+          type: 'multiple-choice',
+          options: ["Way 1", "Way 2", "Way 3", "Way 4"],
+          correctAnswer: "Way 1",
+          explanation: "This is how it works.",
+        },
+        {
+          id: 'q3',
+          question: `What is an example of ${topic}?`,
+          type: 'multiple-choice',
+          options: ["Example 1", "Example 2", "Example 3", "Example 4"],
+          correctAnswer: "Example 1",
+          explanation: "This is an example.",
+        },
+        {
+          id: 'q4',
+          question: `Why is ${topic} important?`,
+          type: 'multiple-choice',
+          options: ["Reason 1", "Reason 2", "Reason 3", "Reason 4"],
+          correctAnswer: "Reason 1",
+          explanation: "This is why it's important.",
+        },
+        {
+          id: 'q5',
+          question: `What is a challenge in ${topic}?`,
+          type: 'multiple-choice',
+          options: ["Challenge 1", "Challenge 2", "Challenge 3", "Challenge 4"],
+          correctAnswer: "Challenge 1",
+          explanation: "This is a challenge.",
+        },
+      ],
+    };
+
+    const topicKey = Object.keys(topicQuestions).find(key => topic.toLowerCase().includes(key)) || 'default';
+    const questions = topicQuestions[topicKey].slice(0, questionCount).map((q, index) => ({
+      ...q,
+      id: `q${index + 1}`,
+    }));
 
     return {
       id: Date.now().toString(),
       title: `${topic} Quiz`,
       topic,
       difficulty,
-      questions: Array(questionCount).fill(null).map((_, index) => ({
-        ...sampleQuestions[0],
-        id: `q${index + 1}`,
-        question: `Question ${index + 1} about ${topic}`,
-      })),
+      questions,
       timeLimit: questionCount * 60,
     };
   }

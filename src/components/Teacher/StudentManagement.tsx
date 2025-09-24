@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+
 import {
   Container,
   Paper,
@@ -26,7 +26,6 @@ import {
   IconFilter,
   IconUserPlus,
   IconMail,
-  IconPhone,
   IconEye,
   IconEdit,
   IconTrash,
@@ -36,11 +35,24 @@ import {
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 
-export const StudentManagement: React.FC = () => {
-  const { t } = useTranslation();
+interface Student {
+  id: number;
+  name: string;
+  email: string;
+  class: string;
+  grade: string;
+  avgScore: number;
+  attendance: number;
+  assignments: { completed: number; total: number };
+  trend: string;
+  lastActive: string;
+  avatar: string;
+}
+
+export const StudentManagement: React.FC = (): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const students = [
     {
@@ -151,6 +163,12 @@ export const StudentManagement: React.FC = () => {
     },
   ];
 
+  const getModalTitle = () => {
+    if (!selectedStudent) return '';
+    const escapedName = selectedStudent.name.replace(/'/g, '&#39;');
+    return `${escapedName} Profile`;
+  };
+
   return (
     <Container size="xl">
       <motion.div
@@ -163,7 +181,7 @@ export const StudentManagement: React.FC = () => {
           <div>
             <Title order={2}>Student Management</Title>
             <Text c="dimmed" size="lg">
-              Monitor and manage your students' progress and performance
+              Monitor and manage your students&apos; progress and performance
             </Text>
           </div>
           <Button leftSection={<IconUserPlus size={16} />}>
@@ -353,7 +371,7 @@ export const StudentManagement: React.FC = () => {
         <Modal
           opened={!!selectedStudent}
           onClose={() => setSelectedStudent(null)}
-          title={selectedStudent ? `${selectedStudent.name} - Profile` : ''}
+          title={getModalTitle()}
           size="lg"
         >
           {selectedStudent && (

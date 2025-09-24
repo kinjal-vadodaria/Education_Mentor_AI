@@ -20,6 +20,7 @@
     "@mantine/notifications": "^7.13.2",
     "@supabase/supabase-js": "^2.39.3",
     "@tabler/icons-react": "^3.35.0",
+    "@tanstack/react-query": "^5.90.2",
     "clsx": "^2.1.0",
     "framer-motion": "^12.23.19",
     "i18next": "^23.7.6",
@@ -33,15 +34,16 @@
     "recharts": "^2.13.3"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.90.2",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
     "@vitejs/plugin-react": "^4.3.0",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.19.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "typescript": "^5.3.0",
+    "typescript": "^5.9.2",
     "vite": "^5.3.1"
   }
 }

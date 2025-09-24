@@ -15,7 +15,6 @@ import {
   ActionIcon,
   ScrollArea,
   Badge,
-  Center,
   Loader,
 } from '@mantine/core';
 import {
@@ -164,10 +163,10 @@ export const AITutor: React.FC = () => {
           setMessages(prev => [...prev, aiMessage]);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       notifications.show({
         title: 'Error',
-        message: error.message || 'Failed to get response from AI tutor',
+        message: error instanceof Error ? error.message : 'Failed to get response from AI tutor',
         color: 'red',
       });
       

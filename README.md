@@ -91,8 +91,8 @@ The platform supports the following languages with full localization:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/edumentor-ai.git
-cd edumentor-ai
+git clone <your-repo-url>
+cd mentorquest
 ```
 
 2. Install dependencies:
@@ -100,33 +100,121 @@ cd edumentor-ai
 npm install
 ```
 
-3. Set up Supabase:
-   - Create a new Supabase project
-   - Run the SQL migration from `supabase/migrations/`
-   - Get your project URL and anon key
-
-4. Set up Google AI:
-   - Get your Google Generative AI API key
-   - Enable the Gemini Pro model
-
-5. Set up environment variables:
+3. Set up environment variables:
 ```bash
 # Copy .env.example to .env and fill in your keys
 cp .env.example .env
-
-# Add your actual keys:
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_GOOGLE_AI_API_KEY=your_api_key_here
 ```
 
-6. Start the development server:
+Edit `.env` with your actual keys:
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_GOOGLE_AI_API_KEY=your_google_ai_api_key
+```
+
+4. Set up Supabase database:
+```bash
+# Run the automated setup script
+bash scripts/setup-supabase.sh
+```
+
+Or manually:
+```bash
+# Run migrations
+psql "your_supabase_db_url" -f supabase/migrations/001_fix_auth_and_schema.sql
+
+# Run seed data
+psql "your_supabase_db_url" -f supabase/seed.sql
+```
+
+5. Start the development server:
 ```bash
 npm run dev
 ```
 
-7. Open [http://localhost:5173](http://localhost:5173) in your browser
+6. Open [http://localhost:5173](http://localhost:5173) in your browser
 
+### 🧪 Testing the Setup
+
+Run the test script to verify everything is working:
+```bash
+bash scripts/test-auth.sh
+```
+
+### 🔧 Database Migration for Auth Fix
+
+If you're experiencing role assignment issues, run this migration:
+```bash
+# Connect to your Supabase database and run:
+psql "your_supabase_db_url" -f supabase/migrations/fix_auth_trigger.sql
+```
+
+### 🎯 Demo Accounts
+
+Use these pre-configured accounts to test the app:
+
+**Teacher Account:**
+- Email: `teacher@demo.com`
+- Password: `demo123`
+- Features: Lesson planning, student analytics, course management
+- **Expected Behavior**: After login, should redirect to `/teacher/dashboard`
+
+**Student Account:**
+- Email: `student@demo.com`  
+- Password: `demo123`
+- Features: AI tutoring, quizzes, progress tracking  
+- **Expected Behavior**: After login, should redirect to `/student/dashboard`
+
+### 🐛 Debugging Authentication Issues
+
+If you're experiencing login/redirect issues:
+
+1. **Check Browser Console**: Look for authentication debug logs:
+   ```
+   🔑 Attempting sign in for: user@example.com
+   🔐 Auth state changed: SIGNED_IN
+   👤 Current user data: { role: 'student', ... }
+   🚀 Redirecting user based on role: student
+   ```
+
+2. **Verify Database Trigger**: Ensure the `handle_new_user()` trigger is working:
+   ```sql
+   SELECT * FROM users WHERE email = 'your-test-email@example.com';
+   ```
+
+3. **Test Role Assignment**: Create a new account and verify the role is set correctly.
+
+4. **Check Network Tab**: Verify Supabase API calls are successful.
+
+## 🔧 Development
+
+### Database Schema
+
+The app uses the following main tables:
+- `users` - User profiles with role-based access (student/teacher)
+- `student_progress` - XP tracking, streaks, levels, badges
+- `quiz_results` - Quiz performance history
+- `chat_messages` - AI tutor conversations
+- `courses` - Teacher course management
+- `lesson_plans` - AI-generated lesson plans
+
+### Authentication Flow
+
+1. User signs up with email/password and selects role (student/teacher)
+2. Supabase Auth creates the auth user with metadata
+3. Database trigger automatically creates user profile in `users` table
+4. RLS policies ensure users can only access their own data
+5. Teachers get additional permissions to view student data
+
+### API Keys Required
+
+- **Supabase URL & Anon Key**: For database and authentication
+- **Google AI API Key**: For AI tutoring and content generation
+
+Get these from:
+- Supabase: [https://supabase.com](https://supabase.com)
+- Google AI: [https://makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
 ## 🔧 Development
 
 ### Available Scripts

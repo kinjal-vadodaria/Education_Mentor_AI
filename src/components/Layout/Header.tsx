@@ -9,18 +9,15 @@ import {
   Avatar,
   UnstyledButton,
   ThemeIcon,
-  Select,
+  Select
 } from '@mantine/core';
 import {
   IconBrain,
-  IconSun,
-  IconMoon,
   IconLogout,
   IconSettings,
   IconUser,
   IconWorld,
 } from '@tabler/icons-react';
-import { useMantineColorScheme } from '@mantine/core';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -32,7 +29,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
   const { t, i18n } = useTranslation();
   const { user, signOut } = useAuth();
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
   const languages = [
     { value: 'en', label: '🇺🇸 English' },
@@ -93,16 +89,6 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
           size="sm"
           searchable
         />
-
-        {/* Theme Toggle */}
-        <ActionIcon
-          onClick={() => toggleColorScheme()}
-          variant="subtle"
-          size="lg"
-          aria-label={colorScheme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
-        >
-          {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-        </ActionIcon>
 
         {/* User Menu */}
         <Menu shadow="md" width={200}>

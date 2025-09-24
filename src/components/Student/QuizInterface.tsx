@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { aiService, Quiz } from '../../services/aiService';
 import { notifications } from '@mantine/notifications';
+import { errorReporting } from '../../services/errorReporting';
 
 export const QuizInterface: React.FC = () => {
   const { t } = useTranslation();
@@ -58,6 +59,26 @@ export const QuizInterface: React.FC = () => {
     { name: 'Literature Analysis', difficulty: 'intermediate', icon: '📚', color: 'teal' },
   ];
 
+  const handleSubmitQuiz = useCallback(async () => {
+    if (!currentQuiz) return;
+
+    setIsLoading(true);
+    try {
+      const result = await aiService.gradeQuiz(currentQuiz, answers, user?.id);
+      setQuizResult(result);
+      setShowResults(true);
+    } catch (error) {
+      errorReporting.reportError(error, { context: 'GRADE_QUIZ' });
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to grade quiz. Please try again.',
+        color: 'red',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentQuiz, answers, user, setQuizResult, setShowResults, setIsLoading]);
+
   useEffect(() => {
     if (currentQuiz && timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -65,7 +86,7 @@ export const QuizInterface: React.FC = () => {
     } else if (timeLeft === 0 && currentQuiz && !showResults) {
       handleSubmitQuiz();
     }
-  }, [timeLeft, currentQuiz, showResults]);
+  }, [timeLeft, currentQuiz, showResults, handleSubmitQuiz]);
 
   const startQuiz = async (topic: string, difficulty: string) => {
     setIsLoading(true);
@@ -107,46 +128,6 @@ export const QuizInterface: React.FC = () => {
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
-
-  const handleSubmitQuiz = async () => {
-    if (!currentQuiz) return;
-
-    setIsLoading(true);
-    try {
-      const result = await aiService.gradeQuiz(currentQuiz, answers, user?.id);
-      setQuizResult(result);
-      setShowResults(true);
-      
-      const percentage = (result.score / result.totalPoints) * 100;
-      if (percentage >= 90) {
-        notifications.show({
-          title: 'Excellent!',
-          message: 'Outstanding performance! 🎉',
-          color: 'green',
-        });
-      } else if (percentage >= 70) {
-        notifications.show({
-          title: 'Good Job!',
-          message: 'Well done! 👍',
-          color: 'blue',
-        });
-      } else {
-        notifications.show({
-          title: 'Keep Practicing!',
-          message: 'You\'re improving! 💪',
-          color: 'orange',
-        });
-      }
-    } catch {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to grade quiz. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
