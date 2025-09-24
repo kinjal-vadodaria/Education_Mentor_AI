@@ -1,142 +1,241 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AppShell, Container, LoadingOverlay } from '@mantine/core';
-import { useDisclosure, useColorScheme } from '@mantine/hooks';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/Auth/LoginForm';
-import { Header } from './components/Layout/Header';
-import { Navbar } from './components/Layout/Navbar';
-import { StudentDashboard } from './components/Student/Dashboard';
-import { AITutor } from './components/Student/AITutor';
-import { QuizInterface } from './components/Student/QuizInterface';
-import { ProgressTracker } from './components/Student/ProgressTracker';
-import { TeacherDashboard } from './components/Teacher/Dashboard';
-import { LessonPlanner } from './components/Teacher/LessonPlanner';
-import { Analytics } from './components/Teacher/Analytics';
-import { StudentManagement } from './components/Teacher/StudentManagement';
+import { useTranslation } from 'react-i18next';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  TextInput,
+  PasswordInput,
+  Button,
+  Group,
+  Stack,
+  Divider,
+  Select,
+  NumberInput,
+  Center,
+  ThemeIcon,
+} from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { IconBrain, IconUser, IconChalkboard } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { notifications } from '@mantine/notifications';
 
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-  const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
+export const LoginForm: React.FC = () => {
+  const { t } = useTranslation();
+  const { signIn, signUp } = useAuth();
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
+  const form = useForm({
+    initialValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+      name: '',
+      role: 'student' as 'student' | 'teacher',
+      gradeLevel: 10,
+    },
+    validate: {
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
+      password: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      confirmPassword: (value, values) =>
+        !isLogin && value !== values.password ? 'Passwords do not match' : null,
+      name: (value) => (!isLogin && !value ? 'Name is required' : null),
+    },
+  });
 
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  if (!user) {
-    return <LoginForm />;
-  }
-
-  const renderContent = () => {
-    if (user.role === 'student') {
-      switch (activeTab) {
-        case 'dashboard':
-          return <StudentDashboard />;
-        case 'ai-tutor':
-          return <AITutor />;
-        case 'quizzes':
-          return <QuizInterface />;
-        case 'progress':
-          return <ProgressTracker />;
-        case 'library':
-          return <Container>Library coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <StudentDashboard />;
+  const handleSubmit = async (values: typeof form.values) => {
+    setIsLoading(true);
+    try {
+      if (isLogin) {
+        await signIn(values.email, values.password);
+        notifications.show({
+          title: 'Welcome back!',
+          message: 'Successfully signed in',
+          color: 'green',
+        });
+      } else {
+        await signUp(
+          values.email,
+          values.password,
+          values.name,
+          values.role,
+          values.role === 'student' ? values.gradeLevel : undefined
+        );
+        notifications.show({
+          title: 'Account created!',
+          message: 'Welcome to EduMentor AI',
+          color: 'green',
+        });
       }
-    } else {
-      switch (activeTab) {
-        case 'dashboard':
-          return <TeacherDashboard />;
-        case 'lesson-planner':
-          return <LessonPlanner />;
-        case 'analytics':
-          return <Analytics />;
-        case 'students':
-          return <StudentManagement />;
-        case 'resources':
-          return <Container>Resources coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <TeacherDashboard />;
-      }
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Something went wrong',
+        color: 'red',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened },
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <Header opened={opened} toggle={toggle} />
-      </AppShell.Header>
+    <Container size="sm" py="xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Center mb="xl">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          >
+            <ThemeIcon size={80} color="indigo" variant="light">
+              <IconBrain size={40} />
+            </ThemeIcon>
+          </motion.div>
+        </Center>
 
-      <AppShell.Navbar p="md">
-        <ErrorBoundary>
-          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-        </ErrorBoundary>
-      </AppShell.Navbar>
+        <Paper shadow="md" p="xl" radius="md" withBorder>
+          <Stack gap="lg">
+            <div style={{ textAlign: 'center' }}>
+              <Title order={2} mb="xs">
+                {isLogin ? t('auth.welcomeBack') : t('auth.createAccount')}
+              </Title>
+              <Text c="dimmed" size="lg">
+                {isLogin 
+                  ? 'Sign in to continue your learning journey'
+                  : 'Join thousands of learners worldwide'
+                }
+              </Text>
+            </div>
 
-      <AppShell.Main>
-        <Container size="xl" px="md">
-          <ErrorBoundary>
-            {renderContent()}
-          </ErrorBoundary>
-        </Container>
-      </AppShell.Main>
-    </AppShell>
+            <form onSubmit={form.onSubmit(handleSubmit)}>
+              <Stack gap="md">
+                {!isLogin && (
+                  <>
+                    <TextInput
+                      label={t('auth.name')}
+                      placeholder="Your full name"
+                      {...form.getInputProps('name')}
+                    />
+
+                    <Select
+                      label="Account Type"
+                      data={[
+                        { value: 'student', label: 'Student' },
+                        { value: 'teacher', label: 'Teacher' },
+                      ]}
+                      {...form.getInputProps('role')}
+                      leftSection={
+                        form.values.role === 'student' ? (
+                          <IconUser size={16} />
+                        ) : (
+                          <IconChalkboard size={16} />
+                        )
+                      }
+                    />
+
+                    {form.values.role === 'student' && (
+                      <NumberInput
+                        label="Grade Level"
+                        min={1}
+                        max={12}
+                        {...form.getInputProps('gradeLevel')}
+                      />
+                    )}
+                  </>
+                )}
+
+                <TextInput
+                  label={t('auth.email')}
+                  placeholder="your@email.com"
+                  {...form.getInputProps('email')}
+                />
+
+                <PasswordInput
+                  label={t('auth.password')}
+                  placeholder="Your password"
+                  {...form.getInputProps('password')}
+                />
+
+                {!isLogin && (
+                  <PasswordInput
+                    label={t('auth.confirmPassword')}
+                    placeholder="Confirm your password"
+                    {...form.getInputProps('confirmPassword')}
+                  />
+                )}
+
+                <Button
+                  type="submit"
+                  loading={isLoading}
+                  size="lg"
+                  variant="gradient"
+                  gradient={{ from: 'indigo', to: 'purple' }}
+                  fullWidth
+                >
+                  {isLogin ? t('auth.login') : t('auth.signup')}
+                </Button>
+              </Stack>
+            </form>
+
+            <Divider label="or" labelPosition="center" />
+
+            <Group justify="center">
+              <Text size="sm" c="dimmed">
+                {isLogin ? t('auth.dontHaveAccount') : t('auth.alreadyHaveAccount')}
+              </Text>
+              <Button
+                variant="subtle"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  form.reset();
+                }}
+              >
+                {isLogin ? t('auth.signup') : t('auth.login')}
+              </Button>
+            </Group>
+
+            {/* Demo Accounts */}
+            <Paper p="md" bg="gray.0" radius="sm">
+              <Text size="sm" fw={500} mb="xs">
+                Demo Accounts:
+              </Text>
+              <Group gap="xs">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => {
+                    form.setValues({
+                      email: 'student@demo.com',
+                      password: 'demo123',
+                    });
+                  }}
+                >
+                  Student Demo
+                </Button>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => {
+                    form.setValues({
+                      email: 'teacher@demo.com',
+                      password: 'demo123',
+                    });
+                  }}
+                >
+                  Teacher Demo
+                </Button>
+              </Group>
+            </Paper>
+          </Stack>
+        </Paper>
+      </motion.div>
+    </Container>
   );
 };
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-}
-
-export default App;

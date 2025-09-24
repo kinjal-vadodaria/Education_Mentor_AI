@@ -1,143 +1,230 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AppShell, Container, LoadingOverlay } from '@mantine/core';
-import { useDisclosure, useColorScheme } from '@mantine/hooks';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/Auth/LoginForm';
-import { Header } from './components/Layout/Header';
-import { Navbar } from './components/Layout/Navbar';
-import { StudentDashboard } from './components/Student/Dashboard';
-import { AITutor } from './components/Student/AITutor';
-import { QuizInterface } from './components/Student/QuizInterface';
-import { ProgressTracker } from './components/Student/ProgressTracker';
-import { TeacherDashboard } from './components/Teacher/Dashboard';
-import { LessonPlanner } from './components/Teacher/LessonPlanner';
-import { Analytics } from './components/Teacher/Analytics';
-import { StudentManagement } from './components/Teacher/StudentManagement';
+import { createClient } from '@supabase/supabase-js';
+import { errorReporting } from './errorReporting';
 
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-  const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  if (!user) {
-    return <LoginForm />;
-  }
-
-  const renderContent = () => {
-    if (user.role === 'student') {
-      switch (activeTab) {
-        case 'dashboard':
-          return <StudentDashboard />;
-        case 'ai-tutor':
-          return <AITutor />;
-        case 'quizzes':
-          return <QuizInterface />;
-        case 'progress':
-          return <ProgressTracker />;
-        case 'library':
-          return <Container>Library coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <StudentDashboard />;
-      }
-    } else {
-      switch (activeTab) {
-        case 'dashboard':
-          return <TeacherDashboard />;
-        case 'lesson-planner':
-          return <LessonPlanner />;
-        case 'analytics':
-          return <Analytics />;
-        case 'students':
-          return <StudentManagement />;
-        case 'resources':
-          return <Container>Resources coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <TeacherDashboard />;
-        errorReporting.reportError(profileError, { context: 'CREATE_USER_PROFILE' });
-      }
-    }
-  };
-
-  return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened },
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <Header opened={opened} toggle={toggle} />
-      </AppShell.Header>
-
-      <AppShell.Navbar p="md">
-        <ErrorBoundary>
-          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-        </ErrorBoundary>
-      </AppShell.Navbar>
-
-      <AppShell.Main>
-        <Container size="xl" px="md">
-          <ErrorBoundary>
-            {renderContent()}
-          </ErrorBoundary>
-        </Container>
-      </AppShell.Main>
-    </AppShell>
-  );
-};
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
-export default App;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Auth functions
+export const signIn = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'SIGN_IN' });
+    throw error;
+  }
+
+  return data;
+};
+
+export const signUp = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'SIGN_UP' });
+    throw error;
+  }
+
+  return data;
+};
+
+export const signOut = async () => {
+  const { error } = await supabase.auth.signOut();
+  
+  if (error) {
+    errorReporting.reportError(error, { context: 'SIGN_OUT' });
+    throw error;
+  }
+};
+
+export const getCurrentUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return null;
+
+  const { data: profile, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_CURRENT_USER' });
+    throw error;
+  }
+
+  return profile;
+};
+
+export const createUserProfile = async (userId: string, profileData: {
+  email: string;
+  name: string;
+  role: 'student' | 'teacher';
+  grade_level?: number;
+}) => {
+  const { data, error } = await supabase
+    .from('users')
+    .insert([
+      {
+        id: userId,
+        ...profileData,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'CREATE_USER_PROFILE' });
+    throw error;
+  }
+
+  return data;
+};
+
+export const updateUserProfile = async (userId: string, updates: Partial<{
+  name: string;
+  grade_level: number;
+  preferences: Record<string, any>;
+}>) => {
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'UPDATE_USER_PROFILE' });
+    throw error;
+  }
+
+  return data;
+};
+
+// Student progress functions
+export const getStudentProgress = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('student_progress')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_STUDENT_PROGRESS' });
+  }
+
+  return { data, error };
+};
+
+export const updateStudentProgress = async (userId: string, subject: string, updates: {
+  xp_points?: number;
+  current_streak?: number;
+  level?: string;
+  badges?: string[];
+}) => {
+  const { data, error } = await supabase
+    .from('student_progress')
+    .upsert([
+      {
+        user_id: userId,
+        subject,
+        ...updates,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'UPDATE_STUDENT_PROGRESS' });
+  }
+
+  return { data, error };
+};
+
+// Quiz functions
+export const saveQuizResult = async (userId: string, quizData: {
+  quiz_topic: string;
+  score: number;
+  total_questions: number;
+  time_taken?: number;
+}) => {
+  const { data, error } = await supabase
+    .from('quiz_results')
+    .insert([
+      {
+        user_id: userId,
+        ...quizData,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'SAVE_QUIZ_RESULT' });
+  }
+
+  return { data, error };
+};
+
+export const getQuizResults = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('quiz_results')
+    .select('*')
+    .eq('user_id', userId)
+    .order('completed_at', { ascending: false });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_QUIZ_RESULTS' });
+  }
+
+  return { data, error };
+};
+
+// Chat functions
+export const saveChatMessage = async (userId: string, messageData: {
+  message: string;
+  response: string;
+  session_id: string;
+}) => {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert([
+      {
+        user_id: userId,
+        ...messageData,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'SAVE_CHAT_MESSAGE' });
+  }
+
+  return { data, error };
+};
+
+export const getChatHistory = async (userId: string, sessionId: string) => {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('session_id', sessionId)
+    .order('timestamp', { ascending: true });
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'GET_CHAT_HISTORY' });
+  }
+
+  return { data, error };
+};

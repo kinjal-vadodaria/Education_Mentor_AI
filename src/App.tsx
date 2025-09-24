@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { AppShell, Container, LoadingOverlay } from '@mantine/core';
-import { useDisclosure, useColorScheme } from '@mantine/hooks';
+import { AppShell, Container } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { Header } from './components/Layout/Header';
-import { Navbar } from './components/Layout/Navbar';
+import { Sidebar } from './components/Layout/Sidebar';
 import { StudentDashboard } from './components/Student/Dashboard';
 import { AITutor } from './components/Student/AITutor';
 import { QuizInterface } from './components/Student/QuizInterface';
@@ -16,6 +16,7 @@ import { TeacherDashboard } from './components/Teacher/Dashboard';
 import { LessonPlanner } from './components/Teacher/LessonPlanner';
 import { Analytics } from './components/Teacher/Analytics';
 import { StudentManagement } from './components/Teacher/StudentManagement';
+import { Settings } from './components/common/Settings';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -57,8 +58,6 @@ const AppContent: React.FC = () => {
           return <Container>Library coming soon...</Container>;
         case 'settings':
           return <Settings />;
-        case 'settings':
-          return <Settings />;
         default:
           return <StudentDashboard />;
       }
@@ -98,7 +97,7 @@ const AppContent: React.FC = () => {
 
       <AppShell.Navbar p="md">
         <ErrorBoundary>
-          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
         </ErrorBoundary>
       </AppShell.Navbar>
 

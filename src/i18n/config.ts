@@ -1,142 +1,48 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AppShell, Container, LoadingOverlay } from '@mantine/core';
-import { useDisclosure, useColorScheme } from '@mantine/hooks';
-import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/Auth/LoginForm';
-import { Header } from './components/Layout/Header';
-import { Navbar } from './components/Layout/Navbar';
-import { StudentDashboard } from './components/Student/Dashboard';
-import { AITutor } from './components/Student/AITutor';
-import { QuizInterface } from './components/Student/QuizInterface';
-import { ProgressTracker } from './components/Student/ProgressTracker';
-import { TeacherDashboard } from './components/Teacher/Dashboard';
-import { LessonPlanner } from './components/Teacher/LessonPlanner';
-import { Analytics } from './components/Teacher/Analytics';
-import { StudentManagement } from './components/Teacher/StudentManagement';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-  const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
+// Import translation files
+import en from './locales/en.json';
+import es from './locales/es.json';
+import fr from './locales/fr.json';
+import de from './locales/de.json';
+import hi from './locales/hi.json';
+import zh from './locales/zh.json';
+import ar from './locales/ar.json';
+import pt from './locales/pt.json';
+import ru from './locales/ru.json';
+import ja from './locales/ja.json';
 
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  if (!user) {
-    return <LoginForm />;
-  }
-
-  const renderContent = () => {
-    if (user.role === 'student') {
-      switch (activeTab) {
-        case 'dashboard':
-          return <StudentDashboard />;
-        case 'ai-tutor':
-          return <AITutor />;
-        case 'quizzes':
-          return <QuizInterface />;
-        case 'progress':
-          return <ProgressTracker />;
-        case 'library':
-          return <Container>Library coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <StudentDashboard />;
-      }
-    } else {
-      switch (activeTab) {
-        case 'dashboard':
-          return <TeacherDashboard />;
-        case 'lesson-planner':
-          return <LessonPlanner />;
-        case 'analytics':
-          return <Analytics />;
-        case 'students':
-          return <StudentManagement />;
-        case 'resources':
-          return <Container>Resources coming soon...</Container>;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <TeacherDashboard />;
-      }
-    }
-  };
-
-  return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened },
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <Header opened={opened} toggle={toggle} />
-      </AppShell.Header>
-
-      <AppShell.Navbar p="md">
-        <ErrorBoundary>
-          <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-        </ErrorBoundary>
-      </AppShell.Navbar>
-
-      <AppShell.Main>
-        <Container size="xl" px="md">
-          <ErrorBoundary>
-            {renderContent()}
-          </ErrorBoundary>
-        </Container>
-      </AppShell.Main>
-    </AppShell>
-  );
+const resources = {
+  en: { translation: en },
+  es: { translation: es },
+  fr: { translation: fr },
+  de: { translation: de },
+  hi: { translation: hi },
+  zh: { translation: zh },
+  ar: { translation: ar },
+  pt: { translation: pt },
+  ru: { translation: ru },
+  ja: { translation: ja },
 };
 
-function App() {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-}
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: 'en',
+    debug: false,
+    
+    interpolation: {
+      escapeValue: false,
+    },
 
-export default App;
+    detection: {
+      order: ['localStorage', 'navigator', 'htmlTag'],
+      caches: ['localStorage'],
+    },
+  });
+
+export default i18n;
