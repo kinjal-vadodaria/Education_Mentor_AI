@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell, Container } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -23,19 +23,6 @@ import { Resources } from './components/Teacher/Resources';
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
-
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
 
   if (isLoading) {
     return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
@@ -44,44 +31,6 @@ const AppContent: React.FC = () => {
   if (!user) {
     return <LoginForm />;
   }
-
-  const renderContent = () => {
-    if (user.role === 'student') {
-      switch (activeTab) {
-        case 'dashboard':
-          return <StudentDashboard />;
-        case 'ai-tutor':
-          return <AITutor />;
-        case 'quizzes':
-          return <QuizInterface />;
-        case 'progress':
-          return <ProgressTracker />;
-        case 'library':
-          return <Library />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <StudentDashboard />;
-      }
-    } else {
-      switch (activeTab) {
-        case 'dashboard':
-          return <TeacherDashboard />;
-        case 'lesson-planner':
-          return <LessonPlanner />;
-        case 'analytics':
-          return <Analytics />;
-        case 'students':
-          return <StudentManagement />;
-        case 'resources':
-          return <Resources />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <TeacherDashboard />;
-      }
-    }
-  };
 
   return (
     <AppShell
@@ -99,14 +48,38 @@ const AppContent: React.FC = () => {
 
       <AppShell.Navbar p="md">
         <ErrorBoundary>
-          <Sidebar onTabChange={setActiveTab} />
+          <Sidebar />
         </ErrorBoundary>
       </AppShell.Navbar>
 
       <AppShell.Main>
         <Container size="xl" px="md">
           <ErrorBoundary>
-            {renderContent()}
+            <Routes>
+              {user.role === 'student' ? (
+                <>
+                  <Route path="/student/dashboard" element={<StudentDashboard />} />
+                  <Route path="/student/ai-tutor" element={<AITutor />} />
+                  <Route path="/student/quizzes" element={<QuizInterface />} />
+                  <Route path="/student/progress" element={<ProgressTracker />} />
+                  <Route path="/student/library" element={<Library />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/" element={<Navigate to="/student/dashboard" replace />} />
+                  <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                  <Route path="/teacher/lesson-planner" element={<LessonPlanner />} />
+                  <Route path="/teacher/analytics" element={<Analytics />} />
+                  <Route path="/teacher/students" element={<StudentManagement />} />
+                  <Route path="/teacher/resources" element={<Resources />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/" element={<Navigate to="/teacher/dashboard" replace />} />
+                  <Route path="/teacher" element={<Navigate to="/teacher/dashboard" replace />} />
+                </>
+              )}
+            </Routes>
           </ErrorBoundary>
         </Container>
       </AppShell.Main>
