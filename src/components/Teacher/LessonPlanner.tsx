@@ -94,6 +94,16 @@ export const LessonPlanner: React.FC = () => {
     }
   };
 
+  const handleCreateNewClick = () => {
+    console.log('Create New Plan clicked'); // Debug log
+    setShowGenerator(true);
+  };
+
+  const handleCloseGenerator = () => {
+    console.log('Closing generator modal'); // Debug log
+    setShowGenerator(false);
+    form.reset();
+  };
   // Sample lesson plans for demo
   const samplePlans: LessonPlan[] = [
     {
@@ -385,7 +395,7 @@ export const LessonPlanner: React.FC = () => {
           </div>
           
           <Button
-            onClick={() => setShowGenerator(true)}
+            onClick={handleCreateNewClick}
             leftSection={<IconPlus size={16} />}
             variant="gradient"
             gradient={{ from: 'blue', to: 'cyan' }}
@@ -398,7 +408,7 @@ export const LessonPlanner: React.FC = () => {
         {/* Generator Modal */}
         <Modal
           opened={showGenerator}
-          onClose={() => setShowGenerator(false)}
+          onClose={handleCloseGenerator}
           title={
             <Group>
               <IconWand size={20} />
@@ -406,6 +416,7 @@ export const LessonPlanner: React.FC = () => {
             </Group>
           }
           size="md"
+          centered
         >
           <form onSubmit={form.onSubmit(generateLessonPlan)}>
             <Stack gap="md">
@@ -413,6 +424,7 @@ export const LessonPlanner: React.FC = () => {
                 label={t('lessonPlanner.topic')}
                 placeholder="e.g., Newton's Laws of Motion"
                 {...form.getInputProps('topic')}
+                required
               />
 
               <Grid>
@@ -421,6 +433,7 @@ export const LessonPlanner: React.FC = () => {
                     label={t('lessonPlanner.subject')}
                     data={subjects}
                     {...form.getInputProps('subject')}
+                    required
                   />
                 </Grid.Col>
                 <Grid.Col span={6}>
@@ -428,6 +441,7 @@ export const LessonPlanner: React.FC = () => {
                     label={t('lessonPlanner.grade')}
                     data={grades.map(g => ({ value: g, label: `Grade ${g}` }))}
                     {...form.getInputProps('grade')}
+                    required
                   />
                 </Grid.Col>
               </Grid>
@@ -438,16 +452,18 @@ export const LessonPlanner: React.FC = () => {
                 max={120}
                 step={15}
                 {...form.getInputProps('duration')}
+                required
               />
 
               <Group justify="flex-end" mt="md">
-                <Button variant="outline" onClick={() => setShowGenerator(false)}>
+                <Button variant="outline" onClick={handleCloseGenerator} type="button">
                   {t('common.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   loading={isGenerating}
                   leftSection={<IconWand size={16} />}
+                  disabled={!form.values.topic.trim()}
                 >
                   {isGenerating ? 'Generating...' : t('lessonPlanner.generatePlan')}
                 </Button>
@@ -543,7 +559,7 @@ export const LessonPlanner: React.FC = () => {
                       {t('lessonPlanner.createFirst')}
                     </Text>
                     <Button
-                      onClick={() => setShowGenerator(true)}
+                      onClick={handleCreateNewClick}
                       leftSection={<IconWand size={16} />}
                       variant="gradient"
                       gradient={{ from: 'blue', to: 'cyan' }}

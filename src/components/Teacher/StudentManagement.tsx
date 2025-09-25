@@ -85,6 +85,16 @@ export const StudentManagement: React.FC = (): JSX.Element => {
     },
   });
 
+  const handleAddStudentClick = () => {
+    console.log('Add Student clicked'); // Debug log
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    console.log('Closing add student modal'); // Debug log
+    setShowAddModal(false);
+    addStudentForm.reset();
+  };
   const mockStudents = [
     {
       id: 1,
@@ -329,7 +339,7 @@ export const StudentManagement: React.FC = (): JSX.Element => {
           </div>
           <Button 
             leftSection={<IconUserPlus size={16} />}
-            onClick={() => setShowAddModal(true)}
+            onClick={handleAddStudentClick}
           >
             Add Student
           </Button>
@@ -584,12 +594,10 @@ export const StudentManagement: React.FC = (): JSX.Element => {
         {/* Add Student Modal */}
         <Modal
           opened={showAddModal}
-          onClose={() => {
-            setShowAddModal(false);
-            addStudentForm.reset();
-          }}
+          onClose={handleCloseAddModal}
           title="Add New Student"
           size="md"
+          centered
         >
           <form onSubmit={addStudentForm.onSubmit(handleAddStudent)}>
             <Stack gap="md">
@@ -597,12 +605,14 @@ export const StudentManagement: React.FC = (): JSX.Element => {
                 label="Full Name"
                 placeholder="Student's full name"
                 {...addStudentForm.getInputProps('name')}
+                required
               />
 
               <TextInput
                 label="Email Address"
                 placeholder="student@school.edu"
                 {...addStudentForm.getInputProps('email')}
+                required
               />
 
               <NumberInput
@@ -610,27 +620,28 @@ export const StudentManagement: React.FC = (): JSX.Element => {
                 min={1}
                 max={12}
                 {...addStudentForm.getInputProps('grade_level')}
+                required
               />
 
               <PasswordInput
                 label="Password"
                 placeholder="Create a password"
                 {...addStudentForm.getInputProps('password')}
+                required
               />
 
               <PasswordInput
                 label="Confirm Password"
                 placeholder="Confirm the password"
                 {...addStudentForm.getInputProps('confirmPassword')}
+                required
               />
 
               <Group justify="flex-end" mt="md">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    addStudentForm.reset();
-                  }}
+                  onClick={handleCloseAddModal}
+                  type="button"
                 >
                   Cancel
                 </Button>
@@ -638,6 +649,7 @@ export const StudentManagement: React.FC = (): JSX.Element => {
                   type="submit"
                   loading={isSubmitting}
                   leftSection={<IconUserPlus size={16} />}
+                  disabled={!addStudentForm.values.name.trim() || !addStudentForm.values.email.trim()}
                 >
                   Add Student
                 </Button>
