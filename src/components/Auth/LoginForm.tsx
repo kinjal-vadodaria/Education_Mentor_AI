@@ -213,8 +213,8 @@ export const LoginForm: React.FC = () => {
                   variant="outline"
                   onClick={() => {
                     form.setValues({
-                      email: 'student@demo.com',
-                      password: 'demo123',
+                      email: 'student110@gmail.com',
+                      password: '123456',
                     });
                   }}
                 >
@@ -225,8 +225,8 @@ export const LoginForm: React.FC = () => {
                   variant="outline"
                   onClick={() => {
                     form.setValues({
-                      email: 'teacher@demo.com',
-                      password: 'demo123',
+                      email: 'teacher110@gmail.com',
+                      password: '123456',
                     });
                   }}
                 >
