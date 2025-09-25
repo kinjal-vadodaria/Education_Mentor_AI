@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Title, Text, Card, Group, Button, Stack, Badge, Image, Grid, TextInput, Select } from '@mantine/core';
+import { Container, Title, Text, Card, Group, Button, Badge, Image, Grid, TextInput, Select } from '@mantine/core';
 import { motion } from 'framer-motion';
 import { IconSearch, IconCalendar, IconUser, IconTag } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';

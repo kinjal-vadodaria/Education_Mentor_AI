@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { MantineProvider } from '@mantine/core';
-import { MantineColorScheme, MantineThemeOverride } from '@mantine/core';
+import { MantineThemeOverride } from '@mantine/core';
 
 export interface CustomTheme {
   primary: string;
