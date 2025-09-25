@@ -10,7 +10,8 @@ import './index.css';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import './i18n/config';
-
+import '@mantine/notifications/styles.layer.css';
+import { ModalsProvider } from '@mantine/modals';
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,11 +35,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme}>
-        <ThemeProvider>
-          <Notifications />
-          <App />
-          <ReactQueryDevtools initialIsOpen={false} />
-        </ThemeProvider>
+        <ModalsProvider>
+          <ThemeProvider>
+            <Notifications />
+            <App />
+            <ReactQueryDevtools initialIsOpen={false} />
+          </ThemeProvider>
+        </ModalsProvider>
       </MantineProvider>
     </QueryClientProvider>
   </React.StrictMode>,

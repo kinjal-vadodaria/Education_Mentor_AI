@@ -17,6 +17,8 @@ import {
   Loader,
   Center,
   Pagination,
+  Divider,
+  Drawer,
 } from '@mantine/core';
 import {
   IconBook,
@@ -60,6 +62,7 @@ export const Library: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+  const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -99,15 +102,10 @@ export const Library: React.FC = () => {
     try {
       setIsLoading(true);
       const { data, error } = await getLibraryItems();
-      
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       setItems(data || []);
     } catch (error) {
       errorReporting.reportError(error, { context: 'LOAD_LIBRARY_ITEMS' });
-      // Use mock data as fallback
       setItems([
         {
           id: '1',
@@ -151,7 +149,6 @@ export const Library: React.FC = () => {
   const filterItems = () => {
     let filtered = items;
 
-    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,22 +157,18 @@ export const Library: React.FC = () => {
       );
     }
 
-    // Category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(item => item.category === selectedCategory);
     }
 
-    // Subject filter
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(item => item.subject === selectedSubject);
     }
 
-    // Difficulty filter
     if (selectedDifficulty !== 'all') {
       filtered = filtered.filter(item => item.difficulty === selectedDifficulty);
     }
 
-    // Grade level filter for students
     if (user?.role === 'student' && user?.grade_level !== undefined) {
       filtered = filtered.filter(item =>
         !item.grade_level ||
@@ -189,7 +182,6 @@ export const Library: React.FC = () => {
 
   const getFileIcon = (fileType?: string) => {
     if (!fileType) return IconFileText;
-    
     if (fileType.includes('video')) return IconVideo;
     if (fileType.includes('image')) return IconPhoto;
     if (fileType.includes('pdf')) return IconFile;
@@ -202,7 +194,6 @@ export const Library: React.FC = () => {
     }
   };
 
-  // Pagination
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
@@ -231,15 +222,9 @@ export const Library: React.FC = () => {
       >
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200 }}
-          >
-            <ThemeIcon size={80} color="indigo" variant="light" mx="auto" mb="md">
-              <IconBook size={40} />
-            </ThemeIcon>
-          </motion.div>
+          <ThemeIcon size={80} color="indigo" variant="light" mx="auto" mb="md">
+            <IconBook size={40} />
+          </ThemeIcon>
           <Title order={2} mb="xs">
             {t('navigation.library')}
           </Title>
@@ -257,7 +242,6 @@ export const Library: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            
             <Group>
               <Select
                 placeholder="Category"
@@ -267,7 +251,6 @@ export const Library: React.FC = () => {
                 onChange={(value) => setSelectedCategory(value || 'all')}
                 w={150}
               />
-              
               <Select
                 placeholder="Subject"
                 data={subjects}
@@ -275,7 +258,6 @@ export const Library: React.FC = () => {
                 onChange={(value) => setSelectedSubject(value || 'all')}
                 w={150}
               />
-              
               <Select
                 placeholder="Difficulty"
                 data={difficulties}
@@ -292,7 +274,6 @@ export const Library: React.FC = () => {
           Showing {paginatedItems.length} of {filteredItems.length} resources
         </Text>
 
-        {/* Library Items Grid */}
         {paginatedItems.length > 0 ? (
           <>
             <Grid>
@@ -314,8 +295,11 @@ export const Library: React.FC = () => {
                             </ThemeIcon>
                             <Badge
                               color={
-                                item.difficulty === 'beginner' ? 'green' :
-                                item.difficulty === 'intermediate' ? 'blue' : 'red'
+                                item.difficulty === 'beginner'
+                                  ? 'green'
+                                  : item.difficulty === 'intermediate'
+                                  ? 'blue'
+                                  : 'red'
                               }
                               variant="light"
                               size="sm"
@@ -328,60 +312,18 @@ export const Library: React.FC = () => {
                             <Title order={5} mb="xs" lineClamp={2}>
                               {item.title}
                             </Title>
-                            
                             <Text size="sm" c="dimmed" mb="sm" lineClamp={3}>
                               {item.description}
                             </Text>
-
                             <Group gap="xs" mb="sm">
-                              <Badge variant="outline" size="xs">
-                                {item.category}
-                              </Badge>
-                              <Badge variant="outline" size="xs">
-                                {item.subject}
-                              </Badge>
+                              <Badge variant="outline" size="xs">{item.category}</Badge>
+                              <Badge variant="outline" size="xs">{item.subject}</Badge>
                               {item.grade_level && (
-                                <Badge variant="outline" size="xs">
-                                  Grade {item.grade_level}
-                                </Badge>
+                                <Badge variant="outline" size="xs">Grade {item.grade_level}</Badge>
                               )}
                             </Group>
-
-                            {item.tags.length > 0 && (
-                              <Group gap="xs" mb="md">
-                                {item.tags.slice(0, 3).map((tag, tagIndex) => (
-                                  <Badge key={tagIndex} variant="light" size="xs" color="gray">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {item.tags.length > 3 && (
-                                  <Badge variant="light" size="xs" color="gray">
-                                    +{item.tags.length - 3}
-                                  </Badge>
-                                )}
-                              </Group>
-                            )}
                           </div>
 
-                          <Group justify="space-between">
-                            <Button
-                              variant="light"
-                              size="sm"
-                              leftSection={<IconEye size={14} />}
-                            >
-                              View
-                            </Button>
-                            {item.file_url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                leftSection={<IconDownload size={14} />}
-                                onClick={() => handleDownload(item)}
-                              >
-                                Download
-                              </Button>
-                            )}
-                          </Group>
                         </Stack>
                       </Card>
                     </motion.div>
@@ -390,7 +332,6 @@ export const Library: React.FC = () => {
               })}
             </Grid>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <Group justify="center" mt="xl">
                 <Pagination
@@ -401,30 +342,64 @@ export const Library: React.FC = () => {
                 />
               </Group>
             )}
+
+            {/* ✅ Drawer for Details */}
+            <Drawer
+              opened={!!selectedItem}
+              onClose={() => setSelectedItem(null)}
+              title={selectedItem?.title}
+              padding="xl"
+              position="right"
+              size="lg"
+            >
+              {selectedItem && (
+                <Stack gap="md">
+                  <Text c="dimmed" size="sm">
+                    {selectedItem.subject} • {selectedItem.category} • {selectedItem.difficulty}
+                  </Text>
+                  <Divider />
+                  <Text size="sm">{selectedItem.description}</Text>
+                  {selectedItem.grade_level && (
+                    <Badge variant="outline" color="indigo">
+                      Grade {selectedItem.grade_level}
+                    </Badge>
+                  )}
+                  {selectedItem.tags.length > 0 && (
+                    <Group gap="xs">
+                      {selectedItem.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="light" size="xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </Group>
+                  )}
+                  {selectedItem.file_url && (
+                    <Button
+                      variant="filled"
+                      leftSection={<IconDownload size={16} />}
+                      onClick={() => handleDownload(selectedItem)}
+                    >
+                      Download File
+                    </Button>
+                  )}
+                </Stack>
+              )}
+            </Drawer>
           </>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <Paper shadow="sm" p="xl" radius="md" withBorder>
-              <Center>
-                <Stack align="center" gap="md">
-                  <ThemeIcon size={80} color="gray" variant="light">
-                    <IconBook size={40} />
-                  </ThemeIcon>
-                  <div style={{ textAlign: 'center' }}>
-                    <Title order={4} mb="xs">
-                      No resources found
-                    </Title>
-                    <Text c="dimmed">
-                      Try adjusting your search criteria or filters
-                    </Text>
-                  </div>
-                </Stack>
-              </Center>
-            </Paper>
-          </motion.div>
+          <Paper shadow="sm" p="xl" radius="md" withBorder>
+            <Center>
+              <Stack align="center" gap="md">
+                <ThemeIcon size={80} color="gray" variant="light">
+                  <IconBook size={40} />
+                </ThemeIcon>
+                <div style={{ textAlign: 'center' }}>
+                  <Title order={4} mb="xs">No resources found</Title>
+                  <Text c="dimmed">Try adjusting your search criteria or filters</Text>
+                </div>
+              </Stack>
+            </Center>
+          </Paper>
         )}
       </motion.div>
     </Container>
