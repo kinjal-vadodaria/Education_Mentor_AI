@@ -3,14 +3,20 @@
   box-sizing: border-box;
 }
 
+:root {
+  --theme-primary: #3b82f6;
+  --theme-background: #ffffff;
+  --theme-text: #000000;
+}
+
 html {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: var(--theme-text);
+  background-color: var(--theme-background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -24,18 +30,22 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--theme-background);
+  color: var(--theme-text);
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+  background-color: var(--theme-background);
+  color: var(--theme-text);
 }
 
 /* Light theme overrides */
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
-    background-color: #ffffff;
+    /* Removed direct background-color to allow custom --theme-background variable to take precedence */
   }
 }
 
@@ -59,7 +69,7 @@ body {
 
 /* Focus styles for accessibility */
 *:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--theme-primary);
   outline-offset: 2px;
 }
 
