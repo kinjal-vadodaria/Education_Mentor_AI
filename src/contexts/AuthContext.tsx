@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const currentUser = await getCurrentUser();
       console.log('👤 Current user data:', currentUser);
       setUser(currentUser);
-      
+
       // Handle role-based redirection after user data is loaded
       if (currentUser && (window.location.pathname === '/' || window.location.pathname === '')) {
         console.log('🚀 Redirecting user based on role:', currentUser.role);
@@ -64,7 +64,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Error in refreshUser:', error);
       errorReporting.reportError(error, { context: 'REFRESH_USER' });
-      setUser(null);
+      // Don't unset user if already set to avoid flicker
+      if (!user) {
+        setUser(null);
+      }
     }
   };
 
@@ -102,23 +105,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
 
-        // Add timeout to prevent hanging on getSession
-        const getSessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Session check timeout')), 5000)
-        );
-
         try {
-          const { data: { session } } = await Promise.race([getSessionPromise, timeoutPromise]);
+          const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            await refreshUser();
+            // Set user directly from session to avoid delays on reload
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              role: session.user.user_metadata?.role || 'student',
+              grade_level: session.user.user_metadata?.grade_level,
+              created_at: session.user.created_at,
+              preferences: {
+                language: 'en',
+                theme: 'light' as 'light' | 'dark',
+                difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced'
+              }
+            });
           } else {
             setUser(null);
           }
         } catch (sessionError: unknown) {
           // If session check fails due to invalid tokens, clear them and proceed
-          if (sessionError.message?.includes('Invalid Refresh Token') ||
-              sessionError.message?.includes('Refresh Token Not Found')) {
+          if (sessionError instanceof Error && (sessionError.message?.includes('Invalid Refresh Token') ||
+              sessionError.message?.includes('Refresh Token Not Found'))) {
             console.log('🧹 Clearing invalid session tokens');
             localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token');
             // Also clear any other Supabase related localStorage
@@ -129,6 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             });
           }
           setUser(null);
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -143,12 +154,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔐 Auth state changed:', event, session?.user?.id);
-      
+
       if (event === 'SIGNED_IN' && session?.user) {
-        console.log('✅ User signed in, refreshing profile...');
-        setIsLoading(true);
-        await refreshUser();
-        setIsLoading(false);
+        console.log('✅ User signed in, setting profile from session...');
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          role: session.user.user_metadata?.role || 'student',
+          grade_level: session.user.user_metadata?.grade_level,
+          created_at: session.user.created_at,
+          preferences: {
+            language: 'en',
+            theme: 'light' as 'light' | 'dark',
+            difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced'
+          }
+        });
+        // Handle role-based redirection
+        const userRole = session.user.user_metadata?.role || 'student';
+        if (window.location.pathname === '/' || window.location.pathname === '') {
+          console.log('🚀 Redirecting user based on role:', userRole);
+          if (userRole === 'student') {
+            navigate('/student/dashboard', { replace: true });
+          } else if (userRole === 'teacher') {
+            navigate('/teacher/dashboard', { replace: true });
+          }
+        }
       } else if (event === 'SIGNED_OUT') {
         console.log('👋 User signed out');
         setUser(null);

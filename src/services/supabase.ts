@@ -13,6 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
+    storage: window.localStorage,
   },
 });
 
@@ -104,7 +105,10 @@ export const getCurrentUser = async () => {
     }
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Add timeout to prevent hanging
+  const getUserPromise = supabase.auth.getUser();
+  const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: { user: null } }), 5000)); // 5 second timeout
+  const { data: { user } } = (await Promise.race([getUserPromise, timeoutPromise])) as any;
 
   if (!user) return null;
 
