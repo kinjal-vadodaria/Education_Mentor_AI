@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { notifications } from '@mantine/notifications';
 import {
   Container,
   Paper,
@@ -17,8 +18,9 @@ import {
   PasswordInput,
   NumberInput,
   Badge,
+  ColorInput,
 } from '@mantine/core';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, CustomTheme } from '../../contexts/ThemeContext';
 import { useForm } from '@mantine/form';
 import {
   IconSettings,
@@ -30,16 +32,26 @@ import {
   IconKey,
   IconDeviceFloppy,
   IconCheck,
+  IconX,
+  IconRefresh,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { updateUserProfile } from '../../services/supabase';
-import { notifications } from '@mantine/notifications';
+import { updateUserProfile, supabase } from '../../services/supabase';
 
 export const Settings: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { user, refreshUser } = useAuth();
-  const { colorScheme, toggleColorScheme } = useTheme();
+  const {
+    colorScheme,
+    toggleColorScheme,
+    currentTheme,
+    customTheme,
+    setPresetTheme,
+    setCustomTheme,
+    resetToDefault,
+    presetThemes,
+  } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   const languages = [
@@ -110,7 +122,7 @@ export const Settings: React.FC = () => {
       const updatedPreferences = { ...user.preferences, ...preferences };
       await updateUserProfile(user.id, { preferences: updatedPreferences });
       await refreshUser();
-      
+
       notifications.show({
         title: 'Success',
         message: 'Preferences updated successfully!',
@@ -126,17 +138,35 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleProfileUpdate = async (values: typeof profileForm.values) => {
-    if (!user) return;
+  // New handlers for color panel
+  const handlePresetThemeSelect = (themeName: string) => {
+    const selected = presetThemes.find((t) => t.name === themeName);
+    if (selected) {
+      setPresetTheme(selected);
+      // Note: themePreset and customTheme not in preferences type, handled by ThemeContext
+    }
+  };
 
+  const handleCustomColorChange = (field: keyof CustomTheme, value: string) => {
+    let currentTheme = customTheme;
+    if (!currentTheme) {
+      currentTheme = { primary: '#ffffff', background: '#ffffff', text: '#000000' };
+    }
+    const newTheme = { ...currentTheme, [field]: value };
+    setCustomTheme(newTheme);
+    // Note: customTheme not in preferences type, handled by ThemeContext
+  };
+
+  const handleResetTheme = () => {
+    resetToDefault();
+    // Note: themePreset and customTheme not in preferences type, handled by ThemeContext
+  };
+
+  const handleProfileUpdate = async (values: typeof profileForm.values) => {
     setIsLoading(true);
     try {
-      await updateUserProfile(user.id, {
-        name: values.name,
-        grade_level: values.grade_level,
-      });
+      await updateUserProfile(user.id, values);
       await refreshUser();
-      
       notifications.show({
         title: 'Success',
         message: 'Profile updated successfully!',
@@ -148,28 +178,47 @@ export const Settings: React.FC = () => {
         title: 'Error',
         message: 'Failed to update profile',
         color: 'red',
+        icon: <IconX size={16} />,
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePasswordChange = async () => {
+  const handlePasswordChange = async (values: typeof passwordForm.values) => {
+    if (values.newPassword !== values.confirmPassword) {
+      notifications.show({
+        title: 'Error',
+        message: 'Passwords do not match',
+        color: 'red',
+        icon: <IconX size={16} />,
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // In a real app, you would call a password change API
+      const { error } = await supabase.auth.updateUser({
+        password: values.newPassword,
+      });
+
+      if (error) throw error;
+
       notifications.show({
         title: 'Success',
         message: 'Password updated successfully!',
         color: 'green',
         icon: <IconCheck size={16} />,
       });
+
+      // Clear the form
       passwordForm.reset();
     } catch (error) {
       notifications.show({
         title: 'Error',
-        message: 'Failed to update password',
+        message: (error as Error).message || 'Failed to update password',
         color: 'red',
+        icon: <IconX size={16} />,
       });
     } finally {
       setIsLoading(false);
@@ -310,6 +359,56 @@ export const Settings: React.FC = () => {
                       value={user?.preferences?.difficulty || 'intermediate'}
                       onChange={handleDifficultyChange}
                     />
+                  </div>
+
+                  {/* New Color Panel */}
+                  <div>
+                    <Text fw={500} mb="xs">Component Theme</Text>
+                    <Group gap="xs" mb="md">
+                      {presetThemes.map((theme) => (
+                        <Button
+                          key={theme.name}
+                          size="xs"
+                          variant={currentTheme?.name === theme.name ? 'filled' : 'outline'}
+                          style={{
+                            backgroundColor: theme.primary,
+                            color: theme.text,
+                            borderColor: currentTheme?.name === theme.name ? undefined : theme.primary,
+                          }}
+                          onClick={() => handlePresetThemeSelect(theme.name)}
+                        >
+                          {theme.name}
+                        </Button>
+                      ))}
+                    </Group>
+                  </div>
+
+                  <div>
+                    <Text fw={500} mb="xs">Customize Your Own Colors</Text>
+                    <ColorInput
+                      label="Primary Color"
+                      value={customTheme?.primary || '#ffffff'}
+                      onChange={(value) => handleCustomColorChange('primary', value)}
+                      format="hex"
+                      swatches={presetThemes.map((t) => t.primary)}
+                    />
+                    <ColorInput
+                      label="Background Color"
+                      value={customTheme?.background || '#ffffff'}
+                      onChange={(value) => handleCustomColorChange('background', value)}
+                      format="hex"
+                      swatches={presetThemes.map((t) => t.background)}
+                    />
+                    <ColorInput
+                      label="Text Color"
+                      value={customTheme?.text || '#000000'}
+                      onChange={(value) => handleCustomColorChange('text', value)}
+                      format="hex"
+                      swatches={presetThemes.map((t) => t.text)}
+                    />
+                    <Button mt="sm" variant="outline" leftSection={<IconRefresh size={16} />} onClick={handleResetTheme}>
+                      Reset to Default
+                    </Button>
                   </div>
                 </Stack>
               </Card>

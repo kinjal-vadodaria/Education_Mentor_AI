@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Group,
   Burger,
@@ -33,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
   const { t, i18n } = useTranslation();
   const { user, signOut } = useAuth();
   const { colorScheme, toggleColorScheme } = useTheme();
+  const navigate = useNavigate();
 
   const languages = [
     { value: 'en', label: '🇺🇸 English' },
@@ -128,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({ opened, toggle }) => {
             <Menu.Label>Account</Menu.Label>
             <Menu.Item
               leftSection={<IconSettings size={14} />}
-              onClick={() => window.dispatchEvent(new CustomEvent('changeTab', { detail: 'settings' }))}
+              onClick={() => navigate('/settings')}
             >
               {t('navigation.settings')}
             </Menu.Item>
