@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell, Container } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -18,48 +17,20 @@ import { LessonPlanner } from './components/Teacher/LessonPlanner';
 import { Analytics } from './components/Teacher/Analytics';
 import { StudentManagement } from './components/Teacher/StudentManagement';
 import { Settings } from './components/common/Settings';
+import { Library } from './components/Student/Library';
+import { Resources } from './components/Teacher/Resources';
 
-// Protected Route Component
-const ProtectedRoute: React.FC<{ 
-  children: React.ReactNode; 
-  requiredRole?: 'student' | 'teacher';
-}> = ({ children, requiredRole }) => {
+const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
+  const [opened, { toggle }] = useDisclosure();
 
   if (isLoading) {
     return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <LoginForm />;
   }
-
-  if (requiredRole && user.role !== requiredRole) {
-    // Redirect to appropriate dashboard based on actual role
-    const redirectPath = user.role === 'student' ? '/student/dashboard' : '/teacher/dashboard';
-    return <Navigate to={redirectPath} replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Dashboard Layout Component
-const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [opened, { toggle }] = useDisclosure();
-  const [activeTab, setActiveTab] = useState('dashboard');
-
-  // Listen for tab change events from quick actions
-  useEffect(() => {
-    const handleTabChange = (event: CustomEvent) => {
-      setActiveTab(event.detail);
-    };
-
-    window.addEventListener('changeTab', handleTabChange as EventListener);
-    return () => {
-      window.removeEventListener('changeTab', handleTabChange as EventListener);
-    };
-  }, []);
 
   return (
     <AppShell
@@ -77,73 +48,42 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
       <AppShell.Navbar p="md">
         <ErrorBoundary>
-          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <Sidebar />
         </ErrorBoundary>
       </AppShell.Navbar>
 
       <AppShell.Main>
         <Container size="xl" px="md">
           <ErrorBoundary>
-            {children}
+            <Routes>
+              {user.role === 'student' ? (
+                <>
+                  <Route path="/student/dashboard" element={<StudentDashboard />} />
+                  <Route path="/student/ai-tutor" element={<AITutor />} />
+                  <Route path="/student/quizzes" element={<QuizInterface />} />
+                  <Route path="/student/progress" element={<ProgressTracker />} />
+                  <Route path="/student/library" element={<Library />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/" element={<Navigate to="/student/dashboard" replace />} />
+                  <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                  <Route path="/teacher/lesson-planner" element={<LessonPlanner />} />
+                  <Route path="/teacher/analytics" element={<Analytics />} />
+                  <Route path="/teacher/students" element={<StudentManagement />} />
+                  <Route path="/teacher/resources" element={<Resources />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/" element={<Navigate to="/teacher/dashboard" replace />} />
+                  <Route path="/teacher" element={<Navigate to="/teacher/dashboard" replace />} />
+                </>
+              )}
+            </Routes>
           </ErrorBoundary>
         </Container>
       </AppShell.Main>
     </AppShell>
-  );
-};
-
-const AppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your learning environment..." fullScreen />;
-  }
-
-  return (
-    <Routes>
-      {/* Public Routes */}
-      <Route 
-        path="/" 
-        element={!user ? <LoginForm /> : <Navigate to={user.role === 'student' ? '/student/dashboard' : '/teacher/dashboard'} replace />} 
-      />
-      
-      {/* Student Routes */}
-      <Route path="/student/*" element={
-        <ProtectedRoute requiredRole="student">
-          <DashboardLayout>
-            <Routes>
-              <Route path="dashboard" element={<StudentDashboard />} />
-              <Route path="ai-tutor" element={<AITutor />} />
-              <Route path="quizzes" element={<QuizInterface />} />
-              <Route path="progress" element={<ProgressTracker />} />
-              <Route path="library" element={<Container>Library coming soon...</Container>} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/student/dashboard" replace />} />
-            </Routes>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Teacher Routes */}
-      <Route path="/teacher/*" element={
-        <ProtectedRoute requiredRole="teacher">
-          <DashboardLayout>
-            <Routes>
-              <Route path="dashboard" element={<TeacherDashboard />} />
-              <Route path="lesson-planner" element={<LessonPlanner />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="students" element={<StudentManagement />} />
-              <Route path="resources" element={<Container>Resources coming soon...</Container>} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/teacher/dashboard" replace />} />
-            </Routes>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
   );
 };
 

@@ -32,7 +32,6 @@ export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [progress, setProgress] = useState<ProgressData[]>([]);
   const [recentQuizzes, setRecentQuizzes] = useState<QuizResult[]>([]);
-  const [isLoading, setLoading] = useState(true);
 
   interface QuizResult {
     quiz_topic: string;
@@ -64,8 +63,6 @@ export const StudentDashboard: React.FC = () => {
       }
     } catch (error) {
       errorReporting.reportError(error, { context: 'LOAD_DASHBOARD_DATA' });
-    } finally {
-      setLoading(false);
     }
   }, [user]);
 

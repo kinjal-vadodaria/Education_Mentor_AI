@@ -16,12 +16,7 @@ import {
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface SidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -48,7 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
   const handleTabClick = (tab: typeof tabs[0]) => {
     navigate(tab.path);
-    onTabChange(tab.id);
   };
 
   // Get current active tab from URL

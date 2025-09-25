@@ -4,7 +4,8 @@ import { MantineProvider, createTheme } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import App from './App.tsx';
+import { ThemeProvider } from './contexts/ThemeContext';
+import App from './App';
 import './index.css';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
@@ -20,9 +21,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// Create light theme (remove dark theme as requested)
+// Create theme with dynamic color scheme support
 const theme = createTheme({
-  colorScheme: 'light',
   primaryColor: 'indigo',
   fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
   headings: {
@@ -33,10 +33,12 @@ const theme = createTheme({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme} defaultColorScheme="light">
-        <Notifications />
-        <App />
-        <ReactQueryDevtools initialIsOpen={false} />
+      <MantineProvider theme={theme}>
+        <ThemeProvider>
+          <Notifications />
+          <App />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </ThemeProvider>
       </MantineProvider>
     </QueryClientProvider>
   </React.StrictMode>,
