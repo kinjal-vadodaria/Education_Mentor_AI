@@ -19,6 +19,7 @@ import { StudentManagement } from './components/Teacher/StudentManagement';
 import { Settings } from './components/common/Settings';
 import { Library } from './components/Student/Library';
 import { Resources } from './components/Teacher/Resources';
+import { Blog } from './components/common/Blog';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -63,6 +64,7 @@ const AppContent: React.FC = () => {
                   <Route path="/student/quizzes" element={<QuizInterface />} />
                   <Route path="/student/progress" element={<ProgressTracker />} />
                   <Route path="/student/library" element={<Library />} />
+                  <Route path="/blog" element={<Blog />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/" element={<Navigate to="/student/dashboard" replace />} />
                   <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
@@ -74,6 +76,7 @@ const AppContent: React.FC = () => {
                   <Route path="/teacher/analytics" element={<Analytics />} />
                   <Route path="/teacher/students" element={<StudentManagement />} />
                   <Route path="/teacher/resources" element={<Resources />} />
+                  <Route path="/blog" element={<Blog />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/" element={<Navigate to="/teacher/dashboard" replace />} />
                   <Route path="/teacher" element={<Navigate to="/teacher/dashboard" replace />} />

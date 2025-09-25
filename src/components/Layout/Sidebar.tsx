@@ -28,6 +28,7 @@ export const Sidebar: React.FC = () => {
     { id: 'quizzes', label: t('navigation.quizzes'), icon: IconTarget, path: '/student/quizzes' },
     { id: 'progress', label: t('navigation.progress'), icon: IconTrophy, path: '/student/progress' },
     { id: 'library', label: t('navigation.library'), icon: IconBook, path: '/student/library' },
+    { id: 'blog', label: t('Blog'), icon: IconBook, path: '/blog' },
   ];
 
   const teacherTabs = [
@@ -36,6 +37,7 @@ export const Sidebar: React.FC = () => {
     { id: 'analytics', label: t('navigation.analytics'), icon: IconChartBar, path: '/teacher/analytics' },
     { id: 'students', label: t('navigation.students'), icon: IconUsers, path: '/teacher/students' },
     { id: 'resources', label: t('navigation.resources'), icon: IconFolder, path: '/teacher/resources' },
+    { id: 'blog', label: t('Blog'), icon: IconBook, path: '/blog' },
   ];
 
   const tabs = user?.role === 'student' ? studentTabs : teacherTabs;
