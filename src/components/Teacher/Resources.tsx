@@ -11,10 +11,9 @@ import {
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { getLibraryItems, createLibraryItem, updateLibraryItem, deleteLibraryItem, uploadFile } from '../../services/supabase';
+import { getLibraryItems, createLibraryItem, updateLibraryItem, deleteLibraryItem } from '../../services/supabase';
 import { errorReporting } from '../../services/errorReporting';
 import {
-  Container,
   Paper,
   Title,
   Text,
@@ -22,7 +21,6 @@ import {
   Group,
   Stack,
   ThemeIcon,
-  Badge,
   Modal,
   TextInput,
   Textarea,
@@ -31,10 +29,7 @@ import {
   TagsInput,
   Switch,
   ActionIcon,
-  Table,
-  Loader,
   Center,
-  Card,
   Grid,
 } from '@mantine/core';
 import { Dropzone, FileWithPath } from '@mantine/dropzone';
@@ -214,7 +209,6 @@ export const Resources: React.FC = () => {
     }
   };
 
-  const handleCreateResource = form.onSubmit(createResourceCallback);
 
   const editResourceCallback = async (values: typeof form.values) => {
     if (!editingResource) return;
@@ -249,7 +243,6 @@ export const Resources: React.FC = () => {
     }
   };
 
-  const handleEditResource = form.onSubmit(editResourceCallback);
 
   const handleDeleteResource = async (id: string) => {
     try {
@@ -333,7 +326,7 @@ export const Resources: React.FC = () => {
         {/* Resources Cards */}
         {resources.length > 0 ? (
           <div className="grid">
-            {resources.map((resource, index) => (
+            {resources.map((resource) => (
               <div key={resource.id} className="card">
                 <div className="card-header">
                   <h3 className="card-title">{resource.title}</h3>

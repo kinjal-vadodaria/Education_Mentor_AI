@@ -825,7 +825,7 @@ export const createStudent = async (studentData: {
 
 // File upload functions
 export const uploadFile = async (file: File, path: string) => {
-  const { data, error } = await supabase.storage.from('resources').upload(path, file);
+  const { error } = await supabase.storage.from('resources').upload(path, file);
 
   if (error) {
     errorReporting.reportError(error, { context: 'UPLOAD_FILE' });
