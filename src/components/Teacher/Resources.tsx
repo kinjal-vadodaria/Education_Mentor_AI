@@ -1,4 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  IconFolder,
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconUpload,
+  IconFile,
+  IconDownload,
+  IconX,
+} from '@tabler/icons-react';
+import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { getLibraryItems, createLibraryItem, updateLibraryItem, deleteLibraryItem, uploadFile } from '../../services/supabase';
+import { errorReporting } from '../../services/errorReporting';
 import {
   Container,
   Paper,
@@ -7,7 +21,6 @@ import {
   Button,
   Group,
   Stack,
-  Grid,
   ThemeIcon,
   Badge,
   Modal,
@@ -21,24 +34,13 @@ import {
   Table,
   Loader,
   Center,
+  Card,
+  Grid,
 } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import { Dropzone, FileWithPath } from '@mantine/dropzone';
-import {
-  IconFolder,
-  IconPlus,
-  IconEdit,
-  IconTrash,
-  IconUpload,
-  IconFile,
-  IconDownload,
-  IconX,
-} from '@tabler/icons-react';
-import { motion } from 'framer-motion';
-import { useAuth } from '../../contexts/AuthContext';
-import { getLibraryItems, createLibraryItem, updateLibraryItem, deleteLibraryItem } from '../../services/supabase';
 import { notifications } from '@mantine/notifications';
-import { errorReporting } from '../../services/errorReporting';
+import { useForm } from '@mantine/form';
+import './Resources.css';
 
 interface LibraryItem {
   id: string;
@@ -52,6 +54,7 @@ interface LibraryItem {
   is_public: boolean;
   file_url?: string;
   file_type?: string;
+  file_name?: string;
   created_at: string;
 }
 
@@ -64,6 +67,7 @@ export const Resources: React.FC = () => {
   const [editingResource, setEditingResource] = useState<LibraryItem | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileWithPath[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     initialValues: {
@@ -81,6 +85,14 @@ export const Resources: React.FC = () => {
       description: (value) => (!value ? 'Description is required' : null),
     },
   });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setUploadedFiles(files as FileWithPath[]);
+    setShowCreateModal(true);
+  };
+
+
 
   const categories = [
     'Textbook', 'Worksheet', 'Guide', 'Video', 'Interactive', 'Assessment'
@@ -124,6 +136,24 @@ export const Resources: React.FC = () => {
           difficulty: 'intermediate',
           tags: ['physics', 'laboratory', 'experiments'],
           is_public: true,
+          file_name: 'physics_lab_manual.pdf',
+          file_url: 'https://via.placeholder.com/300x200?text=Physics+Lab+Manual',
+          file_type: 'application/pdf',
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          title: 'Sample Image Resource',
+          description: 'A sample image for educational purposes',
+          category: 'Image',
+          subject: 'General',
+          grade_level: 10,
+          difficulty: 'beginner',
+          tags: ['image', 'sample', 'demo'],
+          is_public: true,
+          file_name: 'sample_image.jpg',
+          file_url: 'https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Sample+Image',
+          file_type: 'image/jpeg',
           created_at: new Date().toISOString(),
         },
       ]);
@@ -132,20 +162,22 @@ export const Resources: React.FC = () => {
     }
   };
 
-  const handleCreateResource = async (values: typeof form.values) => {
+  const createResourceCallback = async (values: typeof form.values) => {
     if (!user) return;
 
     setIsSubmitting(true);
     try {
-      // In a real implementation, you would upload files to storage first
       let fileUrl = '';
       let fileType = '';
-      
+      let fileName = '';
+
       if (uploadedFiles.length > 0) {
         const file = uploadedFiles[0];
-        // Mock file upload - in reality, upload to Supabase Storage
-        fileUrl = `https://example.com/files/${file.name}`;
+        // const path = `${user.id}/${Date.now()}-${file.name}`;
+        // fileUrl = await uploadFile(file, path);
+        fileUrl = `https://via.placeholder.com/300x200?text=${encodeURIComponent(file.name)}`;
         fileType = file.type;
+        fileName = file.name;
       }
 
       const { error } = await createLibraryItem({
@@ -153,6 +185,7 @@ export const Resources: React.FC = () => {
         author_id: user.id,
         file_url: fileUrl || undefined,
         file_type: fileType || undefined,
+        file_name: fileName || undefined,
       });
 
       if (error) {
@@ -181,7 +214,9 @@ export const Resources: React.FC = () => {
     }
   };
 
-  const handleEditResource = async (values: typeof form.values) => {
+  const handleCreateResource = form.onSubmit(createResourceCallback);
+
+  const editResourceCallback = async (values: typeof form.values) => {
     if (!editingResource) return;
 
     setIsSubmitting(true);
@@ -214,6 +249,8 @@ export const Resources: React.FC = () => {
     }
   };
 
+  const handleEditResource = form.onSubmit(editResourceCallback);
+
   const handleDeleteResource = async (id: string) => {
     try {
       const { error } = await deleteLibraryItem(id);
@@ -240,7 +277,6 @@ export const Resources: React.FC = () => {
   };
 
   const openEditModal = (resource: LibraryItem) => {
-    setEditingResource(resource);
     form.setValues({
       title: resource.title,
       description: resource.description,
@@ -251,145 +287,111 @@ export const Resources: React.FC = () => {
       tags: resource.tags,
       is_public: resource.is_public,
     });
+    setEditingResource(resource);
     setShowEditModal(true);
   };
 
   if (isLoading) {
     return (
-      <Container size="lg">
-        <Center style={{ height: '60vh' }}>
-          <Stack align="center">
-            <Loader size="xl" color="blue" />
-            <Text size="lg" c="dimmed">
-              Loading resources...
-            </Text>
-          </Stack>
-        </Center>
-      </Container>
+      <div className="loading">
+        <div className="loading-spinner"></div>
+        <p>Loading resources...</p>
+      </div>
     );
   }
 
   return (
-    <Container size="xl">
+    <div className="container">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         {/* Header */}
-        <Group justify="space-between" mb="xl">
+        <div className="header">
           <div>
-            <Title order={2}>Educational Resources</Title>
-            <Text c="dimmed" size="lg">
-              Manage your educational materials and resources
-            </Text>
+            <h2 className="header-title">Educational Resources</h2>
+            <p className="header-subtitle">Manage your educational materials and resources</p>
           </div>
           
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            leftSection={<IconPlus size={16} />}
-            variant="gradient"
-            gradient={{ from: 'blue', to: 'cyan' }}
+          <button
+            className="btn"
+            onClick={() => fileInputRef.current?.click()}
           >
+            <IconPlus size={16} />
             Add Resource
-          </Button>
-        </Group>
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+            accept="application/pdf,image/*"
+          />
+        </div>
 
-        {/* Resources Table */}
+        {/* Resources Cards */}
         {resources.length > 0 ? (
-          <Paper shadow="sm" radius="md" withBorder>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Title</Table.Th>
-                  <Table.Th>Category</Table.Th>
-                  <Table.Th>Subject</Table.Th>
-                  <Table.Th>Grade</Table.Th>
-                  <Table.Th>Difficulty</Table.Th>
-                  <Table.Th>Visibility</Table.Th>
-                  <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {resources.map((resource, index) => (
-                  <motion.tr
-                    key={resource.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Table.Td>
-                      <div>
-                        <Text fw={500} size="sm">
-                          {resource.title}
-                        </Text>
-                        <Text size="xs" c="dimmed" lineClamp={1}>
-                          {resource.description}
-                        </Text>
-                      </div>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" color="blue">
-                        {resource.category}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{resource.subject}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">Grade {resource.grade_level}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge
-                        variant="light"
-                        color={
-                          resource.difficulty === 'beginner' ? 'green' :
-                          resource.difficulty === 'intermediate' ? 'blue' : 'red'
-                        }
+          <div className="grid">
+            {resources.map((resource, index) => (
+              <div key={resource.id} className="card">
+                <div className="card-header">
+                  <h3 className="card-title">{resource.title}</h3>
+                  <span className="badge badge-blue">{resource.category}</span>
+                </div>
+                <p className="card-description">{resource.description}</p>
+                <div className="card-details">
+                  <span>Subject: {resource.subject}</span>
+                  <span>Grade: {resource.grade_level}</span>
+                  <span className={`badge ${resource.difficulty === 'beginner' ? 'badge-green' : resource.difficulty === 'intermediate' ? 'badge-blue' : 'badge-red'}`}>{resource.difficulty}</span>
+                </div>
+                <div className="card-tags">
+                  {resource.tags.map((tag, idx) => (
+                    <span key={idx} className="badge badge-dot">{tag}</span>
+                  ))}
+                </div>
+                {resource.file_name && (
+                  <p className="card-description">
+                    File: {resource.file_name}
+                  </p>
+                )}
+                {resource.file_type?.startsWith('image/') && resource.file_url && (
+                  <img
+                    src={resource.file_url}
+                    alt={resource.file_name}
+                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '4px', marginTop: '8px' }}
+                  />
+                )}
+                <div className="card-actions">
+                  <span className={`badge ${resource.is_public ? 'badge-green' : 'badge-gray'}`}>
+                    {resource.is_public ? 'Public' : 'Private'}
+                  </span>
+                  <div className="card-actions-right">
+                    <button
+                      className="icon-btn icon-btn-blue"
+                      onClick={() => openEditModal(resource)}
+                    >
+                      <IconEdit size={16} />
+                    </button>
+                    {resource.file_url && (
+                      <button
+                        className="icon-btn icon-btn-green"
+                        onClick={() => window.open(resource.file_url, '_blank')}
                       >
-                        {resource.difficulty}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge
-                        variant="light"
-                        color={resource.is_public ? 'green' : 'gray'}
-                      >
-                        {resource.is_public ? 'Public' : 'Private'}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ActionIcon
-                          variant="subtle"
-                          color="blue"
-                          onClick={() => openEditModal(resource)}
-                        >
-                          <IconEdit size={16} />
-                        </ActionIcon>
-                        {resource.file_url && (
-                          <ActionIcon
-                            variant="subtle"
-                            color="green"
-                            onClick={() => window.open(resource.file_url, '_blank')}
-                          >
-                            <IconDownload size={16} />
-                          </ActionIcon>
-                        )}
-                        <ActionIcon
-                          variant="subtle"
-                          color="red"
-                          onClick={() => handleDeleteResource(resource.id)}
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
-                  </motion.tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
+                        <IconDownload size={16} />
+                      </button>
+                    )}
+                    <button
+                      className="icon-btn icon-btn-red"
+                      onClick={() => handleDeleteResource(resource.id)}
+                    >
+                      <IconTrash size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <motion.div
             initial={{ opacity: 0 }}
@@ -409,7 +411,7 @@ export const Resources: React.FC = () => {
                       Create your first educational resource to get started
                     </Text>
                     <Button
-                      onClick={() => setShowCreateModal(true)}
+                      onClick={() => fileInputRef.current?.click()}
                       leftSection={<IconPlus size={16} />}
                     >
                       Add Resource
@@ -432,7 +434,7 @@ export const Resources: React.FC = () => {
           title="Create New Resource"
           size="lg"
         >
-          <form onSubmit={form.onSubmit(handleCreateResource)}>
+          <form onSubmit={form.onSubmit(createResourceCallback)}>
             <Stack gap="md">
               <TextInput
                 label="Title"
@@ -501,7 +503,7 @@ export const Resources: React.FC = () => {
                 <Dropzone
                   onDrop={setUploadedFiles}
                   maxFiles={1}
-                  accept={['application/pdf', 'image/*', 'video/*', 'text/*']}
+                  accept={['application/pdf', 'image/*']}
                 >
                   <Group justify="center" gap="xl" mih={220} style={{ pointerEvents: 'none' }}>
                     <div>
@@ -564,7 +566,7 @@ export const Resources: React.FC = () => {
           title="Edit Resource"
           size="lg"
         >
-          <form onSubmit={form.onSubmit(handleEditResource)}>
+          <form onSubmit={form.onSubmit(editResourceCallback)}>
             <Stack gap="md">
               <TextInput
                 label="Title"
@@ -645,6 +647,6 @@ export const Resources: React.FC = () => {
           </form>
         </Modal>
       </motion.div>
-    </Container>
+    </div>
   );
 };

@@ -572,6 +572,7 @@ export const createLibraryItem = async (itemData: {
   author_id: string;
   file_url?: string;
   file_type?: string;
+  file_name?: string;
 }) => {
   const { data, error } = await supabase
     .from('library_items')
@@ -820,4 +821,18 @@ export const createStudent = async (studentData: {
     errorReporting.reportError(error, { context: 'CREATE_STUDENT' });
     return { data: null, error };
   }
+};
+
+// File upload functions
+export const uploadFile = async (file: File, path: string) => {
+  const { data, error } = await supabase.storage.from('resources').upload(path, file);
+
+  if (error) {
+    errorReporting.reportError(error, { context: 'UPLOAD_FILE' });
+    throw error;
+  }
+
+  const { data: { publicUrl } } = supabase.storage.from('resources').getPublicUrl(path);
+
+  return publicUrl;
 };
