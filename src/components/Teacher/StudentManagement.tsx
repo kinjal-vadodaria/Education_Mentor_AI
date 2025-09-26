@@ -21,7 +21,6 @@ import {
 } from '@mantine/core';
 import {
   IconUsers,
-  IconSearch,
   IconFilter,
   IconUserPlus,
   IconMail,
@@ -36,10 +35,9 @@ import {
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { getAllStudents, createStudent } from '../../services/supabase';
+import { getAllStudents } from '../../services/supabase';
 import { notifications } from '@mantine/notifications';
 import { errorReporting } from '../../services/errorReporting';
-import { useForm } from '@mantine/form';
 
 interface Student {
   id: number;
@@ -424,11 +422,6 @@ export const StudentManagement: React.FC = (): JSX.Element => {
     },
   ];
 
-  const getModalTitle = () => {
-    if (!selectedStudent) return '';
-    const escapedName = selectedStudent.name.replace(/'/g, '&#39;');
-    return `${escapedName} Profile`;
-  };
 
   return (
     <Container size="xl">
