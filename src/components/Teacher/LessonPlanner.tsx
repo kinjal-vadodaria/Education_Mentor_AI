@@ -12,14 +12,9 @@ import {
   Grid,
   ThemeIcon,
   Badge,
-  Modal,
-  TextInput,
-  Select,
-  NumberInput,
   Timeline,
   Center,
 } from '@mantine/core';
-import { useForm } from '@mantine/form';
 
 import {
   IconFileText,
@@ -48,35 +43,53 @@ export const LessonPlanner: React.FC = () => {
   const [showGenerator, setShowGenerator] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null);
 
-  const form = useForm({
-    initialValues: {
-      topic: '',
-      subject: 'Physics',
-      grade: '10',
-      duration: 45,
-    },
-    validate: {
-      topic: (value) => (!value ? 'Topic is required' : null),
-    },
+  const [formValues, setFormValues] = useState({
+    topic: '',
+    subject: 'Physics',
+    grade: '10',
+    duration: 45,
   });
 
   const subjects = ['Physics', 'Mathematics', 'Chemistry', 'Biology', 'History', 'Literature'];
   const grades = ['6', '7', '8', '9', '10', '11', '12'];
 
-  const generateLessonPlan = async (values: typeof form.values) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormValues(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const generateLessonPlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formValues.topic.trim()) {
+      notifications.show({
+        title: 'Error',
+        message: 'Topic is required',
+        color: 'red',
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const plan = await aiService.generateLessonPlan(
-        values.topic,
-        values.grade,
-        values.duration,
-        values.subject
+        formValues.topic,
+        formValues.grade,
+        formValues.duration,
+        formValues.subject
       );
       
       setLessonPlans(prev => [plan, ...prev]);
       setSelectedPlan(plan);
       setShowGenerator(false);
-      form.reset();
+      setFormValues({
+        topic: '',
+        subject: 'Physics',
+        grade: '10',
+        duration: 45,
+      });
       
       notifications.show({
         title: 'Success',
@@ -376,85 +389,183 @@ export const LessonPlanner: React.FC = () => {
     <Container size="xl">
       <Stack gap="xl">
         {/* Header */}
-        <Group justify="space-between">
-          <div>
-            <Title order={2}>{t('lessonPlanner.title')}</Title>
-            <Text c="dimmed" size="lg">
-              {t('lessonPlanner.subtitle')}
-            </Text>
-          </div>
-          
+        <div>
+          <Title order={2}>{t('lessonPlanner.title')}</Title>
+          <Text c="dimmed" size="lg" mb="md">
+            {t('lessonPlanner.subtitle')}
+          </Text>
+
           <Button
             onClick={() => setShowGenerator(true)}
             leftSection={<IconPlus size={16} />}
-            variant="gradient"
-            gradient={{ from: 'blue', to: 'cyan' }}
+            variant="filled"
+            color="blue"
             type="button"
+            style={{ backgroundColor: 'var(--mantine-color-blue-6)', color: 'white' }}
           >
             {t('lessonPlanner.createNew')}
           </Button>
-        </Group>
+        </div>
 
-        {/* Generator Modal */}
-        <Modal
-          opened={showGenerator}
-          onClose={() => setShowGenerator(false)}
-          title={
-            <Group>
-              <IconWand size={20} />
-              <Text fw={600}>{t('lessonPlanner.generatePlan')}</Text>
-            </Group>
-          }
-          size="md"
-        >
-          <form onSubmit={form.onSubmit(generateLessonPlan)}>
-            <Stack gap="md">
-              <TextInput
-                label={t('lessonPlanner.topic')}
-                placeholder="e.g., Newton's Laws of Motion"
-                {...form.getInputProps('topic')}
-              />
+        {/* Custom Generator Modal */}
+        {showGenerator && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowGenerator(false);
+            }}
+          >
+            <div 
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '2rem',
+                maxWidth: '500px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #e0e0e0', paddingBottom: '1rem' }}>
+                <IconWand size={24} style={{ marginRight: '0.5rem', color: '#1976d2' }} />
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600, color: '#1976d2' }}>
+                  {t('lessonPlanner.generatePlan')}
+                </h2>
+              </div>
 
-              <Grid>
-                <Grid.Col span={6}>
-                  <Select
-                    label={t('lessonPlanner.subject')}
-                    data={subjects}
-                    {...form.getInputProps('subject')}
+              <form onSubmit={generateLessonPlan} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#333' }}>
+                    {t('lessonPlanner.topic')}
+                  </label>
+                  <input
+                    type="text"
+                    name="topic"
+                    placeholder="e.g., Newton's Laws of Motion"
+                    value={formValues.topic}
+                    onChange={handleInputChange}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d0d0d0',
+                      borderRadius: '4px',
+                      fontSize: '1rem',
+                      boxSizing: 'border-box'
+                    }}
                   />
-                </Grid.Col>
-                <Grid.Col span={6}>
-                  <Select
-                    label={t('lessonPlanner.grade')}
-                    data={grades.map(g => ({ value: g, label: `Grade ${g}` }))}
-                    {...form.getInputProps('grade')}
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#333' }}>
+                      {t('lessonPlanner.subject')}
+                    </label>
+                    <select
+                      name="subject"
+                      value={formValues.subject}
+                      onChange={handleInputChange}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d0d0d0',
+                        borderRadius: '4px',
+                        fontSize: '1rem',
+                        backgroundColor: 'white'
+                      }}
+                    >
+                      {subjects.map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#333' }}>
+                      {t('lessonPlanner.grade')}
+                    </label>
+                    <select
+                      name="grade"
+                      value={formValues.grade}
+                      onChange={handleInputChange}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d0d0d0',
+                        borderRadius: '4px',
+                        fontSize: '1rem',
+                        backgroundColor: 'white'
+                      }}
+                    >
+                      {grades.map(g => (
+                        <option key={g} value={g}>Grade {g}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#333' }}>
+                    {t('lessonPlanner.duration')} (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    name="duration"
+                    value={formValues.duration}
+                    onChange={handleInputChange}
+                    min="15"
+                    max="120"
+                    step="15"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d0d0d0',
+                      borderRadius: '4px',
+                      fontSize: '1rem',
+                      boxSizing: 'border-box'
+                    }}
                   />
-                </Grid.Col>
-              </Grid>
+                </div>
 
-              <NumberInput
-                label={t('lessonPlanner.duration')}
-                min={15}
-                max={120}
-                step={15}
-                {...form.getInputProps('duration')}
-              />
-
-              <Group justify="flex-end" mt="md">
-                <Button variant="outline" onClick={() => setShowGenerator(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  type="submit"
-                  loading={isGenerating}
-                  leftSection={<IconWand size={16} />}
-                >
-                  {isGenerating ? 'Generating...' : t('lessonPlanner.generatePlan')}
-                </Button>
-              </Group>
-            </Stack>
-          </form>
-        </Modal>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowGenerator(false)}
+                    style={{ padding: '0.75rem 1.5rem' }}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isGenerating}
+                    leftSection={<IconWand size={16} />}
+                    style={{ 
+                      padding: '0.75rem 1.5rem', 
+                      backgroundColor: isGenerating ? '#ccc' : '#1976d2',
+                      color: 'white'
+                    }}
+                  >
+                    {isGenerating ? 'Generating...' : t('lessonPlanner.generatePlan')}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Lesson Plans Grid */}
         {allPlans.length > 0 ? (
